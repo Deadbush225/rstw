@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Bayanihan Protocol: Signal Zero — a server-authoritative smart-city rescue arena."
+    />
+    <title>Bayanihan Protocol: Signal Zero</title>
+  </head>
+  <body>
+    <div id="app">
+      <section id="boot-screen" class="boot-screen" aria-label="Loading Signal Zero">
+        <div class="boot-grid" aria-hidden="true"></div>
+        <div class="boot-signal" aria-hidden="true">
+          <span class="boot-orbit boot-orbit-outer"></span>
+          <span class="boot-orbit boot-orbit-inner"></span>
+          <span class="boot-mark">SZ</span>
+        </div>
+        <div class="boot-copy">
+          <span class="boot-kicker">Bayanihan Protocol</span>
+          <h1>Signal Zero</h1>
+          <p id="boot-status" role="status" aria-live="polite">Starting response network…</p>
+          <div class="boot-progress" aria-hidden="true">
+            <span id="boot-progress-fill"></span>
+          </div>
+          <small id="boot-progress-label">0%</small>
+          <button id="boot-skip" class="boot-skip" type="button">Skip intro</button>
+        </div>
+      </section>
+
+      <section
+        id="dashboard-shell"
+        class="dashboard-shell"
+        aria-label="Signal Zero command center"
+        hidden
+      >
+        <div class="dashboard-backdrop" aria-hidden="true">
+          <span class="dashboard-radar radar-a"></span>
+          <span class="dashboard-radar radar-b"></span>
+          <span class="dashboard-map-line line-a"></span>
+          <span class="dashboard-map-line line-b"></span>
+        </div>
+
+        <header class="dashboard-header">
+          <a
+            class="dashboard-brand"
+            href="#dashboard-home"
+            data-dashboard-route="home"
+            aria-label="Signal Zero home"
+          >
+            <span class="dashboard-brand-mark" aria-hidden="true">SZ</span>
+            <span><strong>Signal Zero</strong><small>Bayanihan Protocol</small></span>
+          </a>
+          <nav class="dashboard-nav" aria-label="Main menu">
+            <button
+              class="dashboard-nav-item is-active"
+              type="button"
+              data-dashboard-route="home"
+              aria-current="page"
+            >
+              Home
+            </button>
+            <button class="dashboard-nav-item" type="button" data-dashboard-route="responders">
+              Responders
+            </button>
+            <button class="dashboard-nav-item" type="button" data-dashboard-route="how-to-play">
+              How to Play
+            </button>
+            <button class="dashboard-nav-item" type="button" data-dashboard-route="settings">
+              Settings
+            </button>
+          </nav>
+          <div class="dashboard-profile" aria-label="Local responder profile">
+            <span class="profile-signal" aria-hidden="true"></span>
+            <span
+              ><small>Local profile</small
+              ><strong id="dashboard-player-label">Responder</strong></span
+            >
+          </div>
+        </header>
+
+        <main class="dashboard-content" id="dashboard-content">
+          <section
+            id="dashboard-home"
+            class="dashboard-view dashboard-home"
+            data-dashboard-view="home"
+            aria-labelledby="home-title"
+          >
+            <article class="dashboard-hero-card">
+              <div class="dashboard-hero-copy">
+                <span class="dashboard-kicker">Barangay Maligaya · Active flood warning</span>
+                <h1 id="home-title">Race the flood.<br />Restore the signal.</h1>
+                <p>
+                  Deploy as an emergency responder, master a physical rescue course, activate the
+                  Weather Relay, and return the Resilience Core before the district is overwhelmed.
+                </p>
+                <div class="dashboard-hero-actions">
+                  <button id="dashboard-play-button" class="dashboard-primary" type="button">
+                    <span>Play</span><small>Choose a mission</small>
+                  </button>
+                  <button
+                    class="dashboard-secondary"
+                    type="button"
+                    data-dashboard-route="how-to-play"
+                  >
+                    Mission briefing
+                  </button>
+                </div>
+              </div>
+              <div class="dashboard-hero-visual" aria-hidden="true">
+                <div class="district-silhouette">
+                  <span class="district-building building-one"></span>
+                  <span class="district-building building-two"></span>
+                  <span class="district-building building-three"></span>
+                  <span class="district-beacon"></span>
+                  <span class="district-water"></span>
+                </div>
+                <div class="hero-responder-silhouette">
+                  <span class="silhouette-head"></span>
+                  <span class="silhouette-body"></span>
+                  <span class="silhouette-pack"></span>
+                </div>
+                <span class="visual-callout">WEATHER RELAY · 01</span>
+              </div>
+            </article>
+
+            <div class="dashboard-home-grid">
+              <article class="dashboard-card featured-operation">
+                <div class="card-heading">
+                  <span class="dashboard-kicker">Featured operation</span>
+                  <span class="operation-badge">90 sec</span>
+                </div>
+                <h2>Flood Drill</h2>
+                <p>
+                  A focused solo run for learning the rescue route and setting a local high score.
+                </p>
+                <ul class="operation-tags" aria-label="Flood Drill features">
+                  <li>Solo PvE</li>
+                  <li>Local leaderboard</li>
+                  <li>Full objective loop</li>
+                </ul>
+                <button class="text-action" type="button" data-quick-mode="solo">
+                  Configure Flood Drill <span aria-hidden="true">→</span>
+                </button>
+              </article>
+
+              <article class="dashboard-card command-brief">
+                <span class="dashboard-kicker">Why this mission matters</span>
+                <h2>Technology serving resilience</h2>
+                <p>
+                  Flood depth changes traversal, the pump delays propagation, and teams recover
+                  reusable infrastructure instead of treating the city as disposable terrain.
+                </p>
+                <div class="compliance-list" aria-label="Competition theme alignment">
+                  <span>Smart City</span><span>DRRM</span><span>Climate Action</span
+                  ><span>Circular Economy</span>
+                </div>
+              </article>
+
+              <article class="dashboard-card signal-status-card">
+                <span class="dashboard-kicker">System status</span>
+                <dl class="dashboard-status-list">
+                  <div>
+                    <dt>Local services</dt>
+                    <dd><span class="status-light"></span>Ready</dd>
+                  </div>
+                  <div>
+                    <dt>Simulation</dt>
+                    <dd>20 Hz authoritative</dd>
+                  </div>
+                  <div>
+                    <dt>Build</dt>
+                    <dd>Vertical slice</dd>
+                  </div>
+                </dl>
+              </article>
+            </div>
+          </section>
+
+          <section
+            class="dashboard-view dashboard-roster-view"
+            data-dashboard-view="responders"
+            aria-labelledby="responders-title"
+            hidden
+          >
+            <div class="dashboard-page-heading">
+              <div>
+                <span class="dashboard-kicker">Response roster</span>
+                <h1 id="responders-title">Meet the responders</h1>
+              </div>
+              <p>
+                Four original specialists built around movement, infrastructure, information, and
+                team rescue.
+              </p>
+            </div>
+            <div
+              id="dashboard-roster-cards"
+              class="dashboard-roster-cards"
+              aria-label="Available responders"
+            ></div>
+            <div class="roster-note">
+              <strong>Prototype note</strong>
+              <span
+                >Responder identity is selectable now. Ability depth and unique production models
+                will continue to expand with playtesting.</span
+              >
+            </div>
+          </section>
+
+          <section
+            class="dashboard-view dashboard-guide-view"
+            data-dashboard-view="how-to-play"
+            aria-labelledby="guide-title"
+            hidden
+          >
+            <div class="dashboard-page-heading">
+              <div>
+                <span class="dashboard-kicker">Field manual</span>
+                <h1 id="guide-title">How to answer the signal</h1>
+              </div>
+              <p>
+                One readable objective chain, with room for faster routes and coordinated
+                counterplay.
+              </p>
+            </div>
+            <div class="guide-layout">
+              <ol class="guide-steps">
+                <li>
+                  <span>01</span>
+                  <div>
+                    <strong>Scramble</strong>
+                    <p>Steer with WASD, jump over Storm Spinners, and dive through openings.</p>
+                  </div>
+                </li>
+                <li>
+                  <span>02</span>
+                  <div>
+                    <strong>Prepare</strong>
+                    <p>Grab the Rescue Crate and park it on the Pump to delay the flood.</p>
+                  </div>
+                </li>
+                <li>
+                  <span>03</span>
+                  <div>
+                    <strong>Restore</strong>
+                    <p>
+                      Hold the central Weather Relay until the Resilience Core becomes available.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span>04</span>
+                  <div>
+                    <strong>Recover</strong>
+                    <p>Press F beside the Core, then return it to your team's Bayanihan Beacon.</p>
+                  </div>
+                </li>
+              </ol>
+              <aside class="win-condition-card">
+                <span class="dashboard-kicker">Win conditions</span>
+                <div>
+                  <strong>Solo Flood Drill</strong>
+                  <p>
+                    Complete the objective before 90 seconds. Speed, completion, and optional Pump
+                    play determine your score.
+                  </p>
+                </div>
+                <div>
+                  <strong>Multiplayer Versus</strong>
+                  <p>
+                    Outmaneuver the other response team. The first legal Core deposit at its own
+                    Beacon wins.
+                  </p>
+                </div>
+                <dl class="controls-compact">
+                  <div>
+                    <dt>Move</dt>
+                    <dd>WASD / arrows</dd>
+                  </div>
+                  <div>
+                    <dt>Jump</dt>
+                    <dd>Space</dd>
+                  </div>
+                  <div>
+                    <dt>Dive</dt>
+                    <dd>Shift</dd>
+                  </div>
+                  <div>
+                    <dt>Interact</dt>
+                    <dd>F / click</dd>
+                  </div>
+                  <div>
+                    <dt>Rescue Line</dt>
+                    <dd>Q</dd>
+                  </div>
+                  <div>
+                    <dt>Pulse</dt>
+                    <dd>E</dd>
+                  </div>
+                </dl>
+              </aside>
+            </div>
+          </section>
+
+          <section
+            class="dashboard-view dashboard-settings-view"
+            data-dashboard-view="settings"
+            aria-labelledby="settings-title"
+            hidden
+          >
+            <div class="dashboard-page-heading">
+              <div>
+                <span class="dashboard-kicker">Local preferences</span>
+                <h1 id="settings-title">Settings</h1>
+              </div>
+              <p>Preferences are stored on this device and can be changed between deployments.</p>
+            </div>
+            <div class="settings-grid">
+              <article class="settings-card">
+                <div>
+                  <strong>Master sound</strong>
+                  <p>Enable original procedural music and response cues.</p>
+                </div>
+                <label class="switch-control"
+                  ><input id="setting-master-sound" type="checkbox" checked /><span
+                    aria-hidden="true"
+                  ></span
+                  ><b>Enabled</b></label
+                >
+              </article>
+              <article class="settings-card">
+                <div>
+                  <strong>Reduced motion</strong>
+                  <p>Shorten menu transitions and disable decorative motion.</p>
+                </div>
+                <label class="switch-control"
+                  ><input id="setting-reduced-motion" type="checkbox" /><span
+                    aria-hidden="true"
+                  ></span
+                  ><b>Disabled</b></label
+                >
+              </article>
+              <article class="settings-card settings-card-wide">
+                <div>
+                  <strong>Master volume</strong>
+                  <p>Set the level for procedural ambience and response cues.</p>
+                </div>
+                <label class="range-control" for="setting-master-volume">
+                  <input
+                    id="setting-master-volume"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value="75"
+                  />
+                  <output id="master-volume-value" for="setting-master-volume">75%</output>
+                </label>
+              </article>
+              <article class="settings-card settings-card-wide">
+                <div>
+                  <strong>Interface scale</strong>
+                  <p>Adjust dashboard and match-interface density.</p>
+                </div>
+                <div class="segmented-control" role="radiogroup" aria-label="Interface scale">
+                  <label
+                    ><input type="radio" name="ui-scale" value="compact" /><span
+                      >Compact</span
+                    ></label
+                  >
+                  <label
+                    ><input type="radio" name="ui-scale" value="default" checked /><span
+                      >Default</span
+                    ></label
+                  >
+                  <label
+                    ><input type="radio" name="ui-scale" value="large" /><span>Large</span></label
+                  >
+                </div>
+              </article>
+              <article class="settings-card settings-card-wide">
+                <div>
+                  <strong>Camera sensitivity</strong>
+                  <p>Adjust orbit response for mouse or trackpad.</p>
+                </div>
+                <label class="range-control" for="setting-camera-sensitivity">
+                  <input
+                    id="setting-camera-sensitivity"
+                    type="range"
+                    min="50"
+                    max="150"
+                    step="5"
+                    value="100"
+                  />
+                  <output id="camera-sensitivity-value" for="setting-camera-sensitivity"
+                    >100%</output
+                  >
+                </label>
+              </article>
+            </div>
+          </section>
+        </main>
+
+        <footer class="dashboard-footer">
+          <span>Prototype build · Original vertical slice</span>
+          <span>Barangay Maligaya Response Network</span>
+        </footer>
+
+        <section
+          id="deployment-modal"
+          class="deployment-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="deployment-title"
+          hidden
+        >
+          <div class="deployment-dialog">
+            <div class="deployment-dialog-header">
+              <div>
+                <span class="dashboard-kicker">Mission setup</span>
+                <h2 id="deployment-title">Configure deployment</h2>
+              </div>
+              <button
+                id="deployment-close"
+                class="icon-button"
+                type="button"
+                aria-label="Close mission setup"
+              >
+                ×
+              </button>
+            </div>
+
+            <label class="deployment-name" for="deployment-player-name">
+              <span>Responder call sign</span>
+              <input
+                id="deployment-player-name"
+                maxlength="24"
+                autocomplete="nickname"
+                placeholder="Enter your name"
+                required
+              />
+            </label>
+
+            <fieldset class="deployment-fieldset">
+              <legend>1 · Choose mission</legend>
+              <div class="mode-card-grid">
+                <button
+                  class="mode-card is-selected"
+                  type="button"
+                  data-deployment-mode="solo"
+                  aria-pressed="true"
+                >
+                  <span class="mode-icon mode-solo" aria-hidden="true">◇</span>
+                  <span
+                    ><strong>Solo Flood Drill</strong
+                    ><small>90-second PvE run · local leaderboard</small></span
+                  >
+                  <b>Practice</b>
+                </button>
+                <button
+                  class="mode-card"
+                  type="button"
+                  data-deployment-mode="multiplayer"
+                  aria-pressed="false"
+                >
+                  <span class="mode-icon mode-versus" aria-hidden="true">◈</span>
+                  <span
+                    ><strong>Multiplayer Versus</strong
+                    ><small>Competitive Core race · first Beacon wins</small></span
+                  >
+                  <b>Online</b>
+                </button>
+              </div>
+              <p id="mode-rules" class="mode-rules">
+                Complete Relay → Core → Beacon before 90 seconds. Pump activation adds score and
+                delays the flood.
+              </p>
+            </fieldset>
+
+            <fieldset class="deployment-fieldset">
+              <legend>2 · Choose responder</legend>
+              <div
+                id="deployment-roster"
+                class="deployment-roster"
+                role="radiogroup"
+                aria-label="Responder selection"
+              ></div>
+            </fieldset>
+
+            <p id="deployment-error" class="deployment-error" role="alert"></p>
+            <div class="deployment-actions">
+              <button id="deployment-back" class="dashboard-secondary" type="button">Back</button>
+              <button id="deployment-confirm" class="dashboard-primary deploy-button" type="button">
+                <span>Deploy</span><small id="deployment-summary">Solo · Maya</small>
+              </button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <main id="game-shell" aria-label="Signal Zero game arena" hidden>
+        <div id="game-canvas" aria-label="Third-person multiplayer flood-response arena"></div>
+
+        <header class="top-hud glass-panel" aria-label="Match status">
+          <div class="brand-lockup">
+            <span class="brand-mark" aria-hidden="true">SZ</span>
+            <div>
+              <strong>Signal Zero</strong>
+              <small>Bayanihan Protocol</small>
+            </div>
+          </div>
+          <div class="match-readout">
+            <span id="match-phase">WAITING</span>
+            <strong id="match-timer">00:00</strong>
+            <small id="drill-score" hidden>DRILL SCORE 0</small>
+            <small id="drill-best" hidden>BEST 0</small>
+          </div>
+          <div id="connection-pill" class="status-pill status-offline" role="status">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="connection-label">Offline</span>
+          </div>
+          <button id="audio-toggle" class="audio-toggle" type="button" aria-pressed="true">
+            Sound: on
+          </button>
+        </header>
+
+        <aside class="objective-panel glass-panel" aria-label="Mission objective">
+          <div class="panel-eyebrow">Mission</div>
+          <strong id="objective-title">Barangay Maligaya Flood Drill</strong>
+          <div class="progress-track" aria-hidden="true">
+            <div id="objective-progress" class="progress-fill"></div>
+          </div>
+          <p id="objective-status">Waiting for responders</p>
+          <div class="objective-meta">
+            <span id="core-status">Core: locked</span>
+            <span id="flood-status">Flood: dormant</span>
+            <span id="pump-status">Pump: optional</span>
+          </div>
+          <ol class="mission-steps" aria-label="How to win">
+            <li><b>1</b> Use <kbd>WASD</kbd> to enter the center relay.</li>
+            <li><b>2</b> Press <kbd>F</kbd> beside the Core.</li>
+            <li><b>3</b> Return to your beacon and press <kbd>F</kbd>.</li>
+            <li><b>+</b> Click the Rescue Crate; park it on the Pump plate.</li>
+          </ol>
+          <ol
+            id="drill-leaderboard"
+            class="drill-leaderboard"
+            hidden
+            aria-label="Local Flood Drill leaderboard"
+          ></ol>
+        </aside>
+
+        <ol id="event-feed" class="event-feed" aria-live="polite" aria-label="Match events"></ol>
+
+        <section id="targeting-hint" class="targeting-hint" hidden>
+          <strong id="targeting-title">Rescue Line</strong>
+          <span id="targeting-copy">Aim with the camera · press Q to deploy · Esc to cancel</span>
+        </section>
+
+        <section class="hero-hud glass-panel" aria-label="Controlled responder">
+          <div id="hero-portrait" class="portrait" aria-hidden="true">M</div>
+          <div class="vitals">
+            <div class="hero-heading">
+              <strong id="hero-name">Maya</strong>
+              <span id="team-label">No team</span>
+            </div>
+            <div class="meter health-meter">
+              <div id="health-fill" class="meter-fill"></div>
+              <span id="health-label">— / — HP</span>
+            </div>
+            <div class="meter energy-meter">
+              <div id="energy-fill" class="meter-fill"></div>
+              <span id="energy-label">— / — EN</span>
+            </div>
+          </div>
+          <div class="abilities" aria-label="Abilities">
+            <button
+              id="ability-q"
+              class="ability ability-ready"
+              type="button"
+              aria-label="Q Rescue Line"
+            >
+              <kbd>Q</kbd><span class="ability-name">Rescue Line</span
+              ><strong id="q-cooldown">READY</strong>
+            </button>
+            <button
+              id="ability-w"
+              class="ability ability-ready"
+              type="button"
+              aria-label="E Bayanihan Pulse"
+            >
+              <kbd>E</kbd><span class="ability-name">Bayanihan Pulse</span
+              ><strong id="w-cooldown">READY</strong>
+            </button>
+            <button
+              class="ability ability-locked"
+              type="button"
+              data-slot="E"
+              aria-label="C utility not implemented"
+            >
+              <kbd>C</kbd><span class="ability-name">Utility</span><strong>SOON</strong>
+            </button>
+            <button
+              class="ability ability-locked"
+              type="button"
+              data-slot="R"
+              aria-label="R not implemented"
+            >
+              <kbd>R</kbd><span class="ability-name">Ultimate</span><strong>SOON</strong>
+            </button>
+          </div>
+          <div class="command-state">
+            <span>Command</span>
+            <strong id="command-mode">IDLE</strong>
+            <small id="respawn-label"></small>
+          </div>
+        </section>
+
+        <footer class="control-strip" aria-label="Controls">
+          <span><kbd>WASD</kbd> Steer</span>
+          <span><kbd>Space</kbd> Jump</span>
+          <span><kbd>Shift</kbd> Dive</span>
+          <span><kbd>LMB</kbd> Grab / engage</span>
+          <span><kbd>DRAG</kbd> Orbit camera</span>
+          <span><kbd>Q</kbd> Rescue Line</span>
+          <span><kbd>E</kbd> Bayanihan Pulse</span>
+          <span><kbd>F</kbd> Interact</span>
+          <span><kbd>Tab</kbd> Teams</span>
+        </footer>
+
+        <section id="join-panel" class="modal-layer" aria-labelledby="join-title">
+          <div class="join-card glass-panel">
+            <div class="join-art" aria-hidden="true">
+              <span class="radar-ring radar-one"></span>
+              <span class="radar-ring radar-two"></span>
+              <span class="join-emblem">SZ</span>
+            </div>
+            <div class="panel-eyebrow">DOST-NCR Challenge Prototype</div>
+            <h1 id="join-title">Answer the signal.</h1>
+            <p>
+              A flood has cut the barangay warning grid. Restore the Weather Relay, recover its
+              Resilience Core, and bring it home to your Bayanihan Beacon before time runs out.
+            </p>
+            <form id="join-form">
+              <label for="player-name">Responder name</label>
+              <div class="join-row">
+                <input
+                  id="player-name"
+                  name="playerName"
+                  maxlength="24"
+                  autocomplete="nickname"
+                  placeholder="e.g. Maya"
+                  required
+                />
+                <button id="join-button" class="primary-button" type="submit">Join Room</button>
+              </div>
+            </form>
+            <p id="join-error" class="form-error" role="alert"></p>
+            <div id="lobby-section" class="lobby-section" hidden>
+              <div class="lobby-heading">
+                <div>
+                  <span>Assigned response unit</span>
+                  <strong id="lobby-team">Connecting…</strong>
+                </div>
+                <button id="ready-button" class="primary-button" type="button">Ready Up</button>
+              </div>
+              <ul id="lobby-roster" class="lobby-roster"></ul>
+              <small
+                >Solo Flood Drill starts with one ready responder. Multiplayer Versus waits for two
+                ready opponents.</small
+              >
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="scoreboard"
+          class="modal-layer passive-layer"
+          hidden
+          aria-label="Team scoreboard"
+        >
+          <div class="scoreboard-card glass-panel">
+            <div class="panel-eyebrow">Live Response Roster</div>
+            <h2>Teams</h2>
+            <div id="scoreboard-rows" class="scoreboard-rows"></div>
+            <small>Hold Tab to view · Shape and labels distinguish teams as well as color.</small>
+          </div>
+        </section>
+
+        <section id="pause-panel" class="modal-layer" hidden aria-labelledby="pause-title">
+          <div class="pause-card glass-panel">
+            <div class="panel-eyebrow">Local Menu</div>
+            <h2 id="pause-title">Controls paused locally</h2>
+            <p>The authoritative match continues while this menu is open.</p>
+            <dl class="control-list">
+              <div>
+                <dt>Move</dt>
+                <dd>WASD / arrows · Space jump · Shift dive</dd>
+              </div>
+              <div>
+                <dt>Party rescue</dt>
+                <dd>Click crate to grab/release · click rivals to engage</dd>
+              </div>
+              <div>
+                <dt>Camera</dt>
+                <dd>Drag mouse / wheel zoom</dd>
+              </div>
+              <div>
+                <dt>Cancel / menu</dt>
+                <dd>Escape</dd>
+              </div>
+            </dl>
+            <div class="match-menu-actions">
+              <button id="resume-button" class="primary-button" type="button">Resume</button>
+              <button id="return-dashboard-button" class="secondary-button" type="button">
+                Return to Dashboard
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section id="victory-panel" class="modal-layer" hidden aria-labelledby="victory-title">
+          <div class="victory-card glass-panel">
+            <div class="victory-icon" aria-hidden="true">◇</div>
+            <div class="panel-eyebrow">Vertical Slice Complete</div>
+            <h2 id="victory-title">Beacon activated</h2>
+            <p id="victory-copy">A response team secured the district.</p>
+            <strong id="victory-score" hidden></strong>
+            <button id="rematch-button" class="primary-button" type="button">Vote Rematch</button>
+            <button id="victory-dashboard-button" class="secondary-button" type="button">
+              Return to Dashboard
+            </button>
+            <small id="rematch-status">0 / 2 votes</small>
+          </div>
+        </section>
+
+        <div id="toast-stack" class="toast-stack" aria-live="assertive"></div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

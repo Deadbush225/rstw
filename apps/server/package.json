@@ -1,0 +1,20 @@
+{
+  "name": "@signal-zero/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "vitest run --root ../.. apps/server/src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@colyseus/core": "0.17.44",
+    "@colyseus/ws-transport": "0.17.13",
+    "@signal-zero/shared": "0.1.0",
+    "express": "5.1.0"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "name": "bayanihan-protocol-signal-zero",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Server-authoritative multiplayer vertical slice for Bayanihan Protocol: Signal Zero",
+  "main": "apps/desktop/main.cjs",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12 <26",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "postinstall": "npm run build:shared",
+    "build:shared": "npm run build --workspace @signal-zero/shared",
+    "dev": "npm run build:shared && concurrently --kill-others --names shared,server,client --prefix-colors yellow,magenta,cyan \"npm run dev --workspace @signal-zero/shared\" \"npm run dev --workspace @signal-zero/server\" \"npm run dev --workspace @signal-zero/client\"",
+    "test": "npm run build:shared && vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "build": "npm run build:shared && npm run build --workspace @signal-zero/server && npm run build --workspace @signal-zero/client",
+    "desktop:dev": "concurrently --kill-others --names game,desktop --prefix-colors cyan,green \"npm run dev\" \"wait-on http://127.0.0.1:5174 && electron .\"",
+    "desktop:prepare": "npm run build && node apps/desktop/scripts/prepare-renderer.mjs",
+    "desktop:package": "npm run desktop:prepare && electron-builder --dir",
+    "desktop:make:mac": "npm run desktop:prepare && electron-builder --mac zip",
+    "desktop:make:win": "npm run desktop:prepare && electron-builder --win zip"
+  },
+  "dependencies": {
+    "@colyseus/core": "0.17.44",
+    "@colyseus/ws-transport": "0.17.13",
+    "@signal-zero/shared": "0.1.0",
+    "express": "5.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "@types/node": "24.10.1",
+    "concurrently": "9.2.4",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "eslint": "9.39.1",
+    "globals": "16.5.0",
+    "prettier": "3.6.2",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.3",
+    "vitest": "3.2.7",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "ph.signalzero.bayanihanprotocol",
+    "productName": "Bayanihan Protocol Signal Zero",
+    "asar": false,
+    "npmRebuild": false,
+    "files": [
+      "apps/desktop/**",
+      "apps/server/dist/**",
+      "packages/shared/dist/**",
+      "node_modules/**",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.games",
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  }
+}
