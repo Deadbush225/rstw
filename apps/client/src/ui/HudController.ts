@@ -118,6 +118,7 @@ export class HudController implements ArenaUiBridge {
   private readonly waterTimer = requiredElement<HTMLElement>('water-timer');
   private readonly drillScore = requiredElement<HTMLElement>('drill-score');
   private readonly drillBest = requiredElement<HTMLElement>('drill-best');
+  private readonly resilienceScore = requiredElement<HTMLElement>('resilience-score');
   private readonly drillLeaderboard = requiredElement<HTMLOListElement>('drill-leaderboard');
   private readonly objectiveTitle = requiredElement<HTMLElement>('objective-title');
   private readonly objectiveProgress = requiredElement<HTMLElement>('objective-progress');
@@ -126,6 +127,7 @@ export class HudController implements ArenaUiBridge {
   private readonly floodStatus = requiredElement<HTMLElement>('flood-status');
   private readonly pumpStatus = requiredElement<HTMLElement>('pump-status');
   private readonly heldItemStatus = requiredElement<HTMLElement>('held-item-status');
+  private readonly carryingVillagers = requiredElement<HTMLElement>('carrying-villagers');
   private readonly healthFill = requiredElement<HTMLElement>('health-fill');
   private readonly healthLabel = requiredElement<HTMLElement>('health-label');
   private readonly energyFill = requiredElement<HTMLElement>('energy-fill');
@@ -281,6 +283,8 @@ export class HudController implements ArenaUiBridge {
     this.waterTimer.hidden = phase !== 'active';
     this.drillScore.hidden = snapshot.match.mode !== 'flood-drill';
     this.drillScore.textContent = `DRILL SCORE ${snapshot.match.score}`;
+    this.resilienceScore.hidden = snapshot.match.phase !== 'active';
+    this.resilienceScore.textContent = `RESILIENCE ${snapshot.match.resilienceScore}`;
     this.renderDrillLeaderboard(snapshot);
     this.renderObjective(snapshot);
     this.renderPlayers(snapshot);
@@ -507,6 +511,11 @@ export class HudController implements ArenaUiBridge {
       local.heldItem === 'NONE' ? '' : `Holding: ${local.heldItem}`;
     this.heldItemStatus.style.color =
       local.heldItem === 'SANDBAG' ? '#ffcf69' : local.heldItem === 'GENERATOR' ? '#67d7ad' : '';
+    this.carryingVillagers.textContent =
+      local.carryingVillagers > 0
+        ? `Carrying ${local.carryingVillagers} villager${local.carryingVillagers > 1 ? 's' : ''}`
+        : '';
+    this.carryingVillagers.style.color = '#ffaa66';
     this.commandMode.textContent = local.alive
       ? local.commandMode.replace('-', ' ').toUpperCase()
       : 'DEFEATED';

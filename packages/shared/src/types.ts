@@ -12,6 +12,7 @@ export type ObjectiveState = 'neutral' | 'contested' | 'capturing' | 'captured';
 export type PropId = 'rescue-crate';
 export type StormBarrierId = 'storm-barrier:north' | 'storm-barrier:south';
 export type HeldItem = 'NONE' | 'SANDBAG' | 'GENERATOR';
+export type VillagerStatus = 'WANDERING' | 'PANIC' | 'STRANDED';
 
 export interface Vector2 {
   x: number;
@@ -185,6 +186,7 @@ export interface PublicPlayerState {
   diveCooldownEndsAt: number;
   grabbedObjectId: EntityId | null;
   heldItem: HeldItem;
+  carryingVillagers: number;
   facing: Vector2;
   commandMode:
     | 'idle'
@@ -228,6 +230,16 @@ export interface PublicPumpState {
   y: number;
   state: 'offline' | 'active';
   activatedByTeam: TeamId | null;
+}
+
+export interface VillagerState {
+  id: string;
+  x: number;
+  y: number;
+  status: VillagerStatus;
+  homeX: number;
+  homeY: number;
+  elevation: number;
 }
 
 export interface InteractiveObject {
@@ -278,6 +290,7 @@ export interface PublicMatchState {
   elapsedMs: number;
   timeLimitMs: number | null;
   score: number;
+  resilienceScore: number;
   outcome: MatchOutcome;
   countdownEndsAt: number | null;
   winnerTeam: TeamId | null;
@@ -298,6 +311,7 @@ export interface PublicSnapshot {
   stormBarriers: PublicStormBarrierState[];
   beacons: PublicBeaconState[];
   interactiveObjects: InteractiveObject[];
+  villagers: VillagerState[];
   floodLevels: number[];
   waterGrid: WaterCell[];
 }

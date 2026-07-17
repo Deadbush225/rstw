@@ -31,6 +31,10 @@ import {
   type Vector2,
 } from '@signal-zero/shared';
 
+import {
+  VILLAGER_COUNT,
+  type VillagerState,
+} from '@signal-zero/shared';
 import type { GameStore } from '../state/GameStore';
 import { createCharacterModel, type CharacterModel } from './CharacterModel';
 import type { ArenaUiBridge, CommandGateway } from './CommandGateway';
@@ -246,6 +250,14 @@ export class ArenaScene {
     metalness: 0.02,
     transmission: 0.12,
   });
+  private readonly villagerMesh: THREE.InstancedMesh;
+  private readonly villagerMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xffaa66,
+    emissive: 0x663311,
+    emissiveIntensity: 0.35,
+    roughness: 0.7,
+    metalness: 0.05,
+  });
   private readonly relayRoot = new THREE.Group();
   private readonly relayMaterial = new THREE.MeshStandardMaterial({
     color: COLORS.neutral,
@@ -366,6 +378,20 @@ export class ArenaScene {
     this.waterGridMesh.count = 0;
     this.waterGridMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.waterGridMesh.frustumCulled = false;
+
+    const villagerGeometry = new THREE.BoxGeometry(
+      TILE_WORLD_SIZE * 0.42,
+      TILE_WORLD_SIZE * 0.7,
+      TILE_WORLD_SIZE * 0.42,
+    );
+    this.villagerMesh = new THREE.InstancedMesh(
+      villagerGeometry,
+      this.villagerMaterial,
+      VILLAGER_COUNT,
+    );
+    this.villagerMesh.count = 0;
+    this.villagerMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.villagerMesh.frustumCulled = false;
 
     this.relayCaptureRing = new THREE.Mesh(
       new THREE.TorusGeometry(1.32, 0.065, 12, 72),
@@ -598,6 +624,7 @@ export class ArenaScene {
     this.cancelTargeting();
     for (const view of this.playerViews.values()) view.model.dispose();
     this.playerViews.clear();
+    this.villagerMaterial.dispose();
     disposeObject(this.scene);
     this.renderer.dispose();
     this.timer.dispose();
@@ -650,7 +677,14 @@ export class ArenaScene {
     this.createPump();
     this.createBeacons();
     this.createInteractiveObjects();
-    this.scene.add(this.floodMesh, this.waterGridMesh, this.targetMarker, this.targetLine, this.rain);
+    this.scene.add(
+      this.floodMesh,
+      this.waterGridMesh,
+      this.villagerMesh,
+      this.targetMarker,
+      this.targetLine,
+      this.rain,
+    );
 
     const reticle = this.createReticle();
     reticle.position.set(0, 0, -1.25);
@@ -1084,6 +1118,7 @@ export class ArenaScene {
     this.updateFlood(snapshot.floodLevels);
     this.updateWaterGrid(snapshot.waterGrid);
     this.updateObjectives(snapshot);
+    this.updateVillagers(snapshot.villagers);
     this.rain.visible = snapshot.match.floodStarted;
   }
 
@@ -1469,6 +1504,31 @@ export class ArenaScene {
     this.waterGridMesh.count = count;
     this.waterGridMesh.instanceMatrix.needsUpdate = true;
     if (this.waterGridMesh.instanceColor) this.waterGridMesh.instanceColor.needsUpdate = true;
+  }
+
+  private updateVillagers(villagers: readonly VillagerState[]): void {
+    const matrix = new THREE.Matrix4();
+    this.villagerMesh.count = 0;
+    const colorSafe = new THREE.Color(0xffaa66);
+    const colorStranded = new THREE.Color(0xff4444);
+    const colorPanic = new THREE.Color(0xffcc44);
+    for (let index = 0; index < Math.min(villagers.length, VILLAGER_COUNT); index += 1) {
+      const villager = villagers[index];
+      if (!villager) continue;
+      const position = simulationToWorld(villager, villager.elevation * WORLD_SCALE + 0.18);
+      matrix.makeTranslation(position.x, position.y, position.z);
+      this.villagerMesh.setMatrixAt(index, matrix);
+      const color =
+        villager.status === 'STRANDED'
+          ? colorStranded
+          : villager.status === 'PANIC'
+            ? colorPanic
+            : colorSafe;
+      this.villagerMesh.setColorAt(index, color);
+    }
+    this.villagerMesh.count = Math.min(villagers.length, VILLAGER_COUNT);
+    this.villagerMesh.instanceMatrix.needsUpdate = true;
+    if (this.villagerMesh.instanceColor) this.villagerMesh.instanceColor.needsUpdate = true;
   }
 
   private updateObjectives(snapshot: PublicSnapshot): void {

@@ -191,6 +191,21 @@ button {
   letter-spacing: 0.1em;
 }
 
+#resilience-score {
+  margin-top: 1px;
+  color: #ffaa66;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.carrying-row {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
 .status-pill {
   justify-self: end;
   display: inline-flex;

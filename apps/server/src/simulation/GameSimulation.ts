@@ -8,6 +8,7 @@ import {
   DIVE_DURATION_MS,
   DIVE_RECOVERY_MS,
   DIVE_SPEED,
+  EVAC_CENTER_RADIUS,
   FLOOD_START_MS,
   FLOOD_STEP_MS,
   DEFAULT_HERO_ID,
@@ -30,6 +31,7 @@ import {
   REQUIRED_PLAYERS,
   RESCUE_CRATE_POSITION,
   RESCUE_CRATE_RADIUS,
+  RESILIENCE_SCORE_PER_VILLAGER,
   RESPAWN_MS,
   SANDBAG_POSITION,
   SIMULATION_STEP_MS,
@@ -40,9 +42,17 @@ import {
   STORM_BARRIER_HIT_COOLDOWN_MS,
   STORM_BARRIER_KNOCKBACK,
   STORM_BARRIER_STUMBLE_MS,
+  VILLAGER_AT_HOME_DISTANCE,
+  VILLAGER_COUNT,
+  VILLAGER_PICKUP_RADIUS,
+  VILLAGER_ROOF_ELEVATION,
+  VILLAGER_SPEED,
+  VILLAGER_WANDER_RADIUS,
   distance,
   pointToSegmentDistance,
   isHeroId,
+  isWalkableTile,
+  worldToTile,
   type AbilitySlot,
   type GameEvent,
   type HeroId,
@@ -62,6 +72,7 @@ import {
   type StormBarrierId,
   type TeamId,
   type Vector2,
+  type VillagerStatus,
 } from '@signal-zero/shared';
 import { FloodSystem } from './flood.js';
 import { WaterGridSystem } from './waterGrid.js';
@@ -94,6 +105,26 @@ interface RuntimePlayer {
   hazardHitCooldowns: Map<StormBarrierId, number>;
 }
 
+interface VillagerEntity {
+  id: string;
+  x: number;
+  y: number;
+  homeX: number;
+  homeY: number;
+  status: VillagerStatus;
+  wanderTarget: Vector2 | null;
+  wanderTimer: number;
+  elevation: number;
+  path: Vector2[];
+}
+
+const VILLAGER_HOME_POSITIONS: Vector2[] = [
+  { x: 6.5 * 64, y: 4 * 64 },
+  { x: 18.5 * 64, y: 4 * 64 },
+  { x: 6.5 * 64, y: 11 * 64 },
+  { x: 18.5 * 64, y: 11 * 64 },
+];
+
 export interface SimulationCommandResult {
   accepted: boolean;
   reason?: string;
@@ -117,6 +148,7 @@ export class GameSimulation {
   readonly #players = new Map<PlayerId, RuntimePlayer>();
   readonly #events: GameEvent[] = [];
   readonly #rematchVotes = new Set<PlayerId>();
+  readonly #villagers: VillagerEntity[] = [];
   readonly #flood = new FloodSystem();
   readonly #waterGrid = new WaterGridSystem();
   readonly #beacons: PublicBeaconState[] = [
@@ -164,6 +196,7 @@ export class GameSimulation {
   #winnerTeam: TeamId | null = null;
   #outcome: PublicMatchState['outcome'] = null;
   #score = 0;
+  #resilienceScore = 0;
   #timeLimitMs: number | null = null;
   #nextFloodStepAt: number | null = null;
   #nextPumpDrainAt: number | null = null;
@@ -245,6 +278,7 @@ export class GameSimulation {
         diveCooldownEndsAt: 0,
         grabbedObjectId: null,
         heldItem: 'NONE',
+        carryingVillagers: 0,
         facing: team === 'A' ? { x: 1, y: 0 } : { x: -1, y: 0 },
         commandMode: 'idle',
       },
@@ -403,6 +437,9 @@ export class GameSimulation {
     this.#updateStormBarrierCollisions();
     this.#updatePumpPressure();
     this.#updateRelayCapture(deltaMs);
+    this.#updateVillagers(deltaMs);
+    this.#checkVillagerPickup();
+    this.#checkVillagerEvacuation();
   }
 
   getSnapshot(): PublicSnapshot {
@@ -417,6 +454,7 @@ export class GameSimulation {
         elapsedMs: this.#elapsedMs,
         timeLimitMs: this.#timeLimitMs,
         score: this.#score,
+        resilienceScore: this.#resilienceScore,
         outcome: this.#outcome,
         countdownEndsAt: this.#countdownEndsAt,
         winnerTeam: this.#winnerTeam,
@@ -436,6 +474,15 @@ export class GameSimulation {
       stormBarriers: this.#stormBarriers(),
       beacons: this.#beacons.map((beacon) => ({ ...beacon })),
       interactiveObjects: this.#interactiveObjects.map((obj) => ({ ...obj })),
+      villagers: this.#villagers.map((v) => ({
+        id: v.id,
+        x: v.x,
+        y: v.y,
+        status: v.status,
+        homeX: v.homeX,
+        homeY: v.homeY,
+        elevation: v.elevation,
+      })),
       floodLevels: this.#flood.getLevels(),
       waterGrid: Array.from(this.#waterGrid.cells, (cell) => ({
         waterLevel: cell.waterLevel,
@@ -543,7 +590,9 @@ export class GameSimulation {
     } satisfies Partial<PublicPropState>);
     this.#crateLastHandledBy = null;
     this.#nextPumpDrainAt = null;
+    this.#resilienceScore = 0;
     for (const obj of this.#interactiveObjects) obj.available = true;
+    this.#spawnVillagers();
     for (const player of this.#players.values()) {
       const spawn = SPAWN_POSITIONS[player.state.team];
       Object.assign(player.state, {
@@ -564,6 +613,7 @@ export class GameSimulation {
         diveCooldownEndsAt: 0,
         grabbedObjectId: null,
         heldItem: 'NONE',
+        carryingVillagers: 0,
         facing: player.state.team === 'A' ? { x: 1, y: 0 } : { x: -1, y: 0 },
         commandMode: 'idle',
       } satisfies Partial<PublicPlayerState>);
@@ -1354,5 +1404,161 @@ export class GameSimulation {
     this.#core.earnedByTeam = presentTeam;
     this.#addDrillScore(300);
     this.#events.push({ type: 'RELAY_CAPTURED', at: this.#now, team: presentTeam });
+  }
+
+  #spawnVillagers(): void {
+    this.#villagers.length = 0;
+    const streetTiles: Vector2[] = [];
+    for (let row = 0; row < 14; row += 1) {
+      for (let col = 0; col < 24; col += 1) {
+        if (isWalkableTile(col, row)) {
+          streetTiles.push({ x: (col + 0.5) * 64, y: (row + 0.5) * 64 });
+        }
+      }
+    }
+    if (streetTiles.length === 0) return;
+    for (let index = 0; index < VILLAGER_COUNT; index += 1) {
+      const tile = streetTiles[(index * 17) % streetTiles.length] ?? streetTiles[0]!;
+      const homePos = VILLAGER_HOME_POSITIONS[index % VILLAGER_HOME_POSITIONS.length]!;
+      this.#villagers.push({
+        id: `villager:${index}`,
+        x: tile.x,
+        y: tile.y,
+        homeX: homePos.x,
+        homeY: homePos.y,
+        status: 'WANDERING',
+        wanderTarget: null,
+        wanderTimer: 0,
+        elevation: 0,
+        path: [],
+      });
+    }
+  }
+
+  #updateVillagers(deltaMs: number): void {
+    const waterPhase = this.#waterGrid.waterPhase;
+    for (const villager of this.#villagers) {
+      if (villager.status === 'STRANDED') continue;
+      if (waterPhase === 'PREP_CALM') {
+        this.#updateVillagerWander(villager, deltaMs);
+      } else if (waterPhase === 'SWELL') {
+        this.#updateVillagerPanic(villager, deltaMs);
+      } else {
+        this.#updateVillagerDeluge(villager);
+      }
+    }
+  }
+
+  #updateVillagerWander(villager: VillagerEntity, deltaMs: number): void {
+    const speed = VILLAGER_SPEED;
+    const distanceThisStep = (speed * deltaMs) / 1_000;
+    villager.wanderTimer -= deltaMs;
+    if (!villager.wanderTarget || villager.wanderTimer <= 0) {
+      const offsetX = (Math.random() - 0.5) * VILLAGER_WANDER_RADIUS;
+      const offsetY = (Math.random() - 0.5) * VILLAGER_WANDER_RADIUS;
+      let targetX = villager.x + offsetX;
+      let targetY = villager.y + offsetY;
+      targetX = Math.min(24 * 64 - 1, Math.max(0, targetX));
+      targetY = Math.min(14 * 64 - 1, Math.max(0, targetY));
+      villager.wanderTarget = { x: targetX, y: targetY };
+      villager.wanderTimer = 2_000 + Math.random() * 3_000;
+    }
+    const target = villager.wanderTarget;
+    if (!target) return;
+    const dist = distance(villager, target);
+    if (dist <= distanceThisStep) {
+      villager.x = target.x;
+      villager.y = target.y;
+      villager.wanderTarget = null;
+    } else {
+      const ratio = distanceThisStep / dist;
+      villager.x += (target.x - villager.x) * ratio;
+      villager.y += (target.y - villager.y) * ratio;
+    }
+  }
+
+  #updateVillagerPanic(villager: VillagerEntity, deltaMs: number): void {
+    if (villager.status === 'STRANDED') return;
+    villager.status = 'PANIC';
+    const tile = worldToTile(villager);
+    const cellIndex = tile.row * 24 + tile.col;
+    const cell = this.#waterGrid.cells[cellIndex];
+    const waterLevel = cell?.waterLevel ?? 0;
+    const speedMultiplier = waterLevel >= 1 ? 0.8 : 1;
+    const speed = VILLAGER_SPEED * speedMultiplier;
+    const dist = distance(villager, { x: villager.homeX, y: villager.homeY });
+    if (dist <= VILLAGER_AT_HOME_DISTANCE) {
+      villager.x = villager.homeX;
+      villager.y = villager.homeY;
+      villager.path = [];
+      return;
+    }
+    if (villager.path.length === 0) {
+      const route = findPath(villager, { x: villager.homeX, y: villager.homeY }, (col, row) =>
+        this.#flood.getTraversalCost(col, row),
+      );
+      if (route.found) {
+        villager.path = route.points;
+      } else {
+        return;
+      }
+    }
+    const distanceThisStep = (speed * deltaMs) / 1_000;
+    let remaining = distanceThisStep;
+    while (remaining > 0 && villager.path.length > 0) {
+      const waypoint = villager.path[0];
+      if (!waypoint) break;
+      const waypointDist = distance(villager, waypoint);
+      if (waypointDist <= remaining || waypointDist < 0.001) {
+        villager.x = waypoint.x;
+        villager.y = waypoint.y;
+        remaining -= waypointDist;
+        villager.path.shift();
+      } else {
+        const ratio = remaining / waypointDist;
+        villager.x += (waypoint.x - villager.x) * ratio;
+        villager.y += (waypoint.y - villager.y) * ratio;
+        remaining = 0;
+      }
+    }
+  }
+
+  #updateVillagerDeluge(villager: VillagerEntity): void {
+    const dist = distance(villager, { x: villager.homeX, y: villager.homeY });
+    if (dist <= VILLAGER_AT_HOME_DISTANCE) {
+      villager.x = villager.homeX;
+      villager.y = villager.homeY;
+      villager.elevation = VILLAGER_ROOF_ELEVATION;
+    } else {
+      villager.status = 'STRANDED';
+    }
+    villager.path = [];
+  }
+
+  #checkVillagerPickup(): void {
+    for (const player of this.#players.values()) {
+      if (!player.state.alive || !player.state.connected) continue;
+      for (let index = this.#villagers.length - 1; index >= 0; index -= 1) {
+        const villager = this.#villagers[index];
+        if (!villager || villager.status !== 'STRANDED') continue;
+        if (distance(player.state, villager) <= VILLAGER_PICKUP_RADIUS) {
+          player.state.carryingVillagers += 1;
+          this.#villagers.splice(index, 1);
+          break;
+        }
+      }
+    }
+  }
+
+  #checkVillagerEvacuation(): void {
+    for (const player of this.#players.values()) {
+      if (!player.state.alive || !player.state.connected) continue;
+      if (player.state.carryingVillagers <= 0) continue;
+      const beacon = BEACON_POSITIONS[player.state.team];
+      if (distance(player.state, beacon) <= EVAC_CENTER_RADIUS) {
+        this.#resilienceScore += player.state.carryingVillagers * RESILIENCE_SCORE_PER_VILLAGER;
+        player.state.carryingVillagers = 0;
+      }
+    }
   }
 }

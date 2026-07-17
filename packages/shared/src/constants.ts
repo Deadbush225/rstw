@@ -59,6 +59,23 @@ export function getWaterPhase(timerRemainingSeconds: number): WaterPhase {
   return 'DELUGE';
 }
 
+/** Number of villagers spawned per match. */
+export const VILLAGER_COUNT = 8;
+/** Villager movement speed in pixels per second. */
+export const VILLAGER_SPEED = 60;
+/** Radius in pixels for random wander targets. */
+export const VILLAGER_WANDER_RADIUS = 128;
+/** Distance in pixels to consider a villager "at home" (on the roof). */
+export const VILLAGER_AT_HOME_DISTANCE = 48;
+/** Distance in pixels for a player to pick up a STRANDED villager. */
+export const VILLAGER_PICKUP_RADIUS = 32;
+/** Radius in pixels around a beacon to evacuate carried villagers. */
+export const EVAC_CENTER_RADIUS = 64;
+/** Resilience score awarded per evacuated villager. */
+export const RESILIENCE_SCORE_PER_VILLAGER = 100;
+/** Elevation (simulation units) for a villager on a roof. */
+export const VILLAGER_ROOF_ELEVATION = 120;
+
 export const TEAMS = {
   A: {
     id: 'A',

@@ -102,6 +102,8 @@ const publicPlayerStateSchema = z
     stumbleUntil: z.number().finite().nonnegative(),
     diveCooldownEndsAt: z.number().finite().nonnegative(),
     grabbedObjectId: z.string().min(1).max(128).nullable(),
+    heldItem: z.enum(['NONE', 'SANDBAG', 'GENERATOR']),
+    carryingVillagers: z.number().int().nonnegative(),
     facing: normalizedDirectionSchema,
     commandMode: z.enum([
       'idle',
@@ -187,12 +189,25 @@ const matchStateSchema = z
     elapsedMs: z.number().finite().nonnegative(),
     timeLimitMs: z.number().finite().positive().nullable(),
     score: z.number().int().nonnegative(),
+    resilienceScore: z.number().int().nonnegative(),
     outcome: z.enum(['success', 'time-expired']).nullable(),
     countdownEndsAt: z.number().finite().nonnegative().nullable(),
     winnerTeam: teamSchema.nullable(),
     floodStarted: z.boolean(),
     rematchVotes: z.number().int().nonnegative(),
     requiredRematchVotes: z.number().int().positive(),
+  })
+  .strict();
+
+const villagerStateSchema = z
+  .object({
+    id: z.string().min(1).max(128),
+    x: finiteCoordinate,
+    y: finiteCoordinate,
+    status: z.enum(['WANDERING', 'PANIC', 'STRANDED']),
+    homeX: finiteCoordinate,
+    homeY: finiteCoordinate,
+    elevation: z.number().finite().nonnegative(),
   })
   .strict();
 
@@ -208,6 +223,7 @@ export const publicSnapshotSchema = z
     props: z.array(propStateSchema).length(1),
     stormBarriers: z.array(stormBarrierStateSchema).length(2),
     beacons: z.array(beaconStateSchema).length(2),
+    villagers: z.array(villagerStateSchema),
     floodLevels: z
       .array(z.number().int().min(0).max(FLOOD_MAX_LEVEL))
       .length(ARENA_COLS * ARENA_ROWS),
