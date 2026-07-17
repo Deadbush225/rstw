@@ -114,6 +114,8 @@ export class HudController implements ArenaUiBridge {
   private readonly connectionLabel = requiredElement<HTMLElement>('connection-label');
   private readonly matchPhase = requiredElement<HTMLElement>('match-phase');
   private readonly matchTimer = requiredElement<HTMLElement>('match-timer');
+  private readonly waterPhase = requiredElement<HTMLElement>('water-phase');
+  private readonly waterTimer = requiredElement<HTMLElement>('water-timer');
   private readonly drillScore = requiredElement<HTMLElement>('drill-score');
   private readonly drillBest = requiredElement<HTMLElement>('drill-best');
   private readonly drillLeaderboard = requiredElement<HTMLOListElement>('drill-leaderboard');
@@ -123,6 +125,7 @@ export class HudController implements ArenaUiBridge {
   private readonly coreStatus = requiredElement<HTMLElement>('core-status');
   private readonly floodStatus = requiredElement<HTMLElement>('flood-status');
   private readonly pumpStatus = requiredElement<HTMLElement>('pump-status');
+  private readonly heldItemStatus = requiredElement<HTMLElement>('held-item-status');
   private readonly healthFill = requiredElement<HTMLElement>('health-fill');
   private readonly healthLabel = requiredElement<HTMLElement>('health-label');
   private readonly energyFill = requiredElement<HTMLElement>('energy-fill');
@@ -271,6 +274,11 @@ export class HudController implements ArenaUiBridge {
         ? snapshot.match.elapsedMs
         : Math.max(0, snapshot.match.timeLimitMs - snapshot.match.elapsedMs),
     );
+    this.waterPhase.textContent = snapshot.match.waterPhase;
+    this.waterPhase.dataset.waterPhase = snapshot.match.waterPhase;
+    this.waterPhase.hidden = phase !== 'active';
+    this.waterTimer.textContent = formatClock(snapshot.match.timerRemaining);
+    this.waterTimer.hidden = phase !== 'active';
     this.drillScore.hidden = snapshot.match.mode !== 'flood-drill';
     this.drillScore.textContent = `DRILL SCORE ${snapshot.match.score}`;
     this.renderDrillLeaderboard(snapshot);
@@ -495,6 +503,10 @@ export class HudController implements ArenaUiBridge {
     setFill(this.energyFill, local.energy / Math.max(1, local.maxEnergy));
     this.healthLabel.textContent = `${Math.ceil(local.health)} / ${local.maxHealth} HP`;
     this.energyLabel.textContent = `${Math.floor(local.energy)} / ${local.maxEnergy} EN`;
+    this.heldItemStatus.textContent =
+      local.heldItem === 'NONE' ? '' : `Holding: ${local.heldItem}`;
+    this.heldItemStatus.style.color =
+      local.heldItem === 'SANDBAG' ? '#ffcf69' : local.heldItem === 'GENERATOR' ? '#67d7ad' : '';
     this.commandMode.textContent = local.alive
       ? local.commandMode.replace('-', ' ').toUpperCase()
       : 'DEFEATED';

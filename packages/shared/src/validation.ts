@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { FLOOD_MAX_LEVEL, HERO_IDS } from './constants.js';
+import { FLOOD_MAX_LEVEL, HERO_IDS, WATER_GRID_MAX_LEVEL } from './constants.js';
 import { ARENA_COLS, ARENA_ROWS } from './map.js';
 
 const finiteCoordinate = z.number().finite().min(-10_000).max(10_000);
@@ -181,6 +181,8 @@ const stormBarrierStateSchema = z
 const matchStateSchema = z
   .object({
     phase: z.enum(['waiting', 'countdown', 'active', 'ended']),
+    waterPhase: z.enum(['PREP_CALM', 'SWELL', 'DELUGE']),
+    timerRemaining: z.number().finite().nonnegative(),
     mode: z.enum(['flood-drill', 'versus']),
     elapsedMs: z.number().finite().nonnegative(),
     timeLimitMs: z.number().finite().positive().nullable(),
@@ -208,6 +210,16 @@ export const publicSnapshotSchema = z
     beacons: z.array(beaconStateSchema).length(2),
     floodLevels: z
       .array(z.number().int().min(0).max(FLOOD_MAX_LEVEL))
+      .length(ARENA_COLS * ARENA_ROWS),
+    waterGrid: z
+      .array(
+        z
+          .object({
+            waterLevel: z.number().int().min(0).max(WATER_GRID_MAX_LEVEL),
+            isBlocked: z.boolean(),
+          })
+          .strict(),
+      )
       .length(ARENA_COLS * ARENA_ROWS),
   })
   .strict();

@@ -14,6 +14,8 @@ function validSnapshot(): unknown {
     serverTime: 1_000,
     match: {
       phase: 'active',
+      waterPhase: 'PREP_CALM',
+      timerRemaining: 480_000,
       mode: 'flood-drill',
       elapsedMs: 100,
       timeLimitMs: 90_000,
@@ -101,6 +103,10 @@ function validSnapshot(): unknown {
       { id: 'beacon:B', team: 'B', x: 1_440, y: 448 },
     ],
     floodLevels: Array.from({ length: ARENA_COLS * ARENA_ROWS }, () => 0),
+    waterGrid: Array.from({ length: ARENA_COLS * ARENA_ROWS }, () => ({
+      waterLevel: 0,
+      isBlocked: false,
+    })),
   };
 }
 

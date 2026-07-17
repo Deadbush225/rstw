@@ -9,10 +9,12 @@ import {
   BEACON_POSITIONS,
   BUILDING_RECTS,
   CORE_INTERACT_RADIUS,
+  GENERATOR_POSITION,
   GRAB_RADIUS,
   PUMP_PRESSURE_RADIUS,
   RELAY_CAPTURE_RADIUS,
   RESCUE_CRATE_RADIUS,
+  SANDBAG_POSITION,
   TEAMS,
   TILE_SIZE,
   clampToArena,
@@ -20,6 +22,7 @@ import {
   getTileKind,
   type AbilitySlot,
   type GameEvent,
+  type InteractiveObject,
   type PublicPlayerState,
   type PublicPropState,
   type PublicSnapshot,
@@ -224,6 +227,7 @@ export class ArenaScene {
   private readonly targetPointWorld = new THREE.Vector3();
 
   private readonly floodMesh: THREE.InstancedMesh;
+  private readonly waterGridMesh: THREE.InstancedMesh;
   private readonly floodMaterial = new THREE.MeshPhysicalMaterial({
     color: COLORS.shallowFlood,
     transparent: true,
@@ -232,6 +236,15 @@ export class ArenaScene {
     roughness: 0.18,
     metalness: 0.04,
     transmission: 0.08,
+  });
+  private readonly waterGridMaterial = new THREE.MeshPhysicalMaterial({
+    color: COLORS.shallowFlood,
+    transparent: true,
+    opacity: 0.22,
+    depthWrite: false,
+    roughness: 0.24,
+    metalness: 0.02,
+    transmission: 0.12,
   });
   private readonly relayRoot = new THREE.Group();
   private readonly relayMaterial = new THREE.MeshStandardMaterial({
@@ -262,6 +275,7 @@ export class ArenaScene {
   private readonly interactionPrompt: THREE.Sprite;
   private readonly grabPrompt: THREE.Sprite;
   private readonly releasePrompt: THREE.Sprite;
+  private readonly interactiveObjectViews = new Map<string, THREE.Group>();
 
   private animationFrame = 0;
   private ready = false;
@@ -338,6 +352,20 @@ export class ArenaScene {
     this.floodMesh.count = 0;
     this.floodMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.floodMesh.frustumCulled = false;
+
+    const waterGridGeometry = new THREE.BoxGeometry(
+      TILE_WORLD_SIZE * 0.92,
+      0.045,
+      TILE_WORLD_SIZE * 0.92,
+    );
+    this.waterGridMesh = new THREE.InstancedMesh(
+      waterGridGeometry,
+      this.waterGridMaterial,
+      ARENA_COLS * ARENA_ROWS,
+    );
+    this.waterGridMesh.count = 0;
+    this.waterGridMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.waterGridMesh.frustumCulled = false;
 
     this.relayCaptureRing = new THREE.Mesh(
       new THREE.TorusGeometry(1.32, 0.065, 12, 72),
@@ -621,7 +649,8 @@ export class ArenaScene {
     this.createCore();
     this.createPump();
     this.createBeacons();
-    this.scene.add(this.floodMesh, this.targetMarker, this.targetLine, this.rain);
+    this.createInteractiveObjects();
+    this.scene.add(this.floodMesh, this.waterGridMesh, this.targetMarker, this.targetLine, this.rain);
 
     const reticle = this.createReticle();
     reticle.position.set(0, 0, -1.25);
@@ -939,6 +968,100 @@ export class ArenaScene {
     }
   }
 
+  private createInteractiveObjects(): void {
+    // Sandbag pile
+    const sandbagGroup = new THREE.Group();
+    sandbagGroup.position.copy(simulationToWorld(SANDBAG_POSITION, 0.1));
+    const sandbagMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc4a672,
+      roughness: 0.92,
+    });
+    for (let i = 0; i < 5; i += 1) {
+      const bag = new THREE.Mesh(
+        new THREE.BoxGeometry(0.48, 0.22, 0.36),
+        sandbagMaterial,
+      );
+      bag.position.set(
+        (i - 2) * 0.2 + 0.05,
+        0.11 + i * 0.04,
+        Math.sin(i * 1.7) * 0.18,
+      );
+      bag.rotation.z = Math.sin(i) * 0.12;
+      bag.rotation.x = Math.cos(i * 0.8) * 0.08;
+      sandbagGroup.add(bag);
+    }
+    const sandbagLabel = createLabelSprite('SANDBAGS · F TO PICK UP', '#ffd676');
+    sandbagLabel.position.y = 0.8;
+    sandbagLabel.scale.set(3.2, 0.6, 1);
+    sandbagGroup.add(sandbagLabel);
+    const sandbagRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.5, 0.62, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0xffcf69,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    sandbagRing.rotation.x = -Math.PI / 2;
+    sandbagRing.position.y = 0.01;
+    sandbagGroup.add(sandbagRing);
+    sandbagGroup.userData.kind = 'sandbag-pile';
+    this.interactiveObjectViews.set('sandbag-pile', sandbagGroup);
+    this.scene.add(sandbagGroup);
+
+    // Generator
+    const generatorGroup = new THREE.Group();
+    generatorGroup.position.copy(simulationToWorld(GENERATOR_POSITION, 0.1));
+    const generatorMaterial = new THREE.MeshStandardMaterial({
+      color: 0x3a7a5a,
+      metalness: 0.62,
+      roughness: 0.32,
+    });
+    const genBody = new THREE.Mesh(
+      new THREE.BoxGeometry(0.72, 0.52, 0.48),
+      generatorMaterial,
+    );
+    genBody.position.y = 0.26;
+    genBody.castShadow = true;
+    const genHandle = new THREE.Mesh(
+      new THREE.TorusGeometry(0.22, 0.06, 8, 16, Math.PI),
+      new THREE.MeshStandardMaterial({
+        color: 0x20343a,
+        roughness: 0.58,
+        metalness: 0.38,
+      }),
+    );
+    genHandle.position.set(0, 0.58, 0);
+    genHandle.rotation.z = Math.PI;
+    const genVent = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.08, 0.42),
+      new THREE.MeshStandardMaterial({ color: 0x15242a, roughness: 0.7 }),
+    );
+    genVent.position.set(0, 0.34, 0.26);
+    const genLabel = createLabelSprite('GENERATOR · F TO PICK UP', '#67d7ad');
+    genLabel.position.y = 0.8;
+    genLabel.scale.set(3.2, 0.6, 1);
+    generatorGroup.add(genBody, genHandle, genVent, genLabel);
+    const genRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.5, 0.62, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0x67d7ad,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    genRing.rotation.x = -Math.PI / 2;
+    genRing.position.y = 0.01;
+    generatorGroup.add(genRing);
+    generatorGroup.userData.kind = 'generator';
+    this.interactiveObjectViews.set('generator', generatorGroup);
+    this.scene.add(generatorGroup);
+  }
+
   private updateSnapshot(deltaSeconds: number): void {
     const snapshot = this.store.latest;
     if (!snapshot) return;
@@ -953,11 +1076,13 @@ export class ArenaScene {
     this.syncPlayers(this.latestRenderedPlayers, deltaSeconds, snapshot.serverTime);
     this.syncProps(snapshot.props, snapshot.players, deltaSeconds);
     this.syncStormBarriers(snapshot.stormBarriers);
+    this.syncInteractiveObjects(snapshot.interactiveObjects);
     this.updateInteractionPrompt(snapshot);
     if (snapshot.tick === this.lastRenderedTick) return;
 
     this.lastRenderedTick = snapshot.tick;
     this.updateFlood(snapshot.floodLevels);
+    this.updateWaterGrid(snapshot.waterGrid);
     this.updateObjectives(snapshot);
     this.rain.visible = snapshot.match.floodStarted;
   }
@@ -1282,6 +1407,14 @@ export class ArenaScene {
     return { root, targetAngle: -barrier.angle };
   }
 
+  private syncInteractiveObjects(objects: InteractiveObject[]): void {
+    for (const obj of objects) {
+      const view = this.interactiveObjectViews.get(obj.id);
+      if (!view) continue;
+      view.visible = obj.available;
+    }
+  }
+
   private updateFlood(levels: readonly number[]): void {
     const matrix = new THREE.Matrix4();
     let count = 0;
@@ -1305,6 +1438,37 @@ export class ArenaScene {
     this.floodMesh.count = count;
     this.floodMesh.instanceMatrix.needsUpdate = true;
     if (this.floodMesh.instanceColor) this.floodMesh.instanceColor.needsUpdate = true;
+  }
+
+  private updateWaterGrid(cells: readonly { waterLevel: number; isBlocked: boolean }[]): void {
+    const matrix = new THREE.Matrix4();
+    let count = 0;
+    for (let index = 0; index < Math.min(cells.length, ARENA_COLS * ARENA_ROWS); index += 1) {
+      const cell = cells[index];
+      if (!cell || cell.waterLevel <= 0 || cell.isBlocked) continue;
+      const col = index % ARENA_COLS;
+      const row = Math.floor(index / ARENA_COLS);
+      const position = simulationToWorld(
+        { x: (col + 0.5) * TILE_SIZE, y: (row + 0.5) * TILE_SIZE },
+        0.042 + cell.waterLevel * 0.028,
+      );
+      matrix.makeTranslation(position.x, position.y, position.z);
+      this.waterGridMesh.setMatrixAt(count, matrix);
+      this.waterGridMesh.setColorAt(
+        count,
+        new THREE.Color(
+          cell.waterLevel >= 3
+            ? COLORS.deepFlood
+            : cell.waterLevel >= 2
+              ? 0x1a8fa6
+              : COLORS.shallowFlood,
+        ),
+      );
+      count += 1;
+    }
+    this.waterGridMesh.count = count;
+    this.waterGridMesh.instanceMatrix.needsUpdate = true;
+    if (this.waterGridMesh.instanceColor) this.waterGridMesh.instanceColor.needsUpdate = true;
   }
 
   private updateObjectives(snapshot: PublicSnapshot): void {
@@ -1733,12 +1897,19 @@ export class ArenaScene {
       return;
     }
     const ownBeacon = snapshot.beacons.find((beacon) => beacon.team === local.team);
+    const objInRange = snapshot.interactiveObjects.some(
+      (obj) => obj.available && distance(local, obj) <= GRAB_RADIUS,
+    );
+    const holdingAndCanPlace = local.heldItem === 'SANDBAG' || local.heldItem === 'GENERATOR';
     this.interactionPrompt.visible = Boolean(
       (local.hasCore && ownBeacon && distance(local, ownBeacon) <= BEACON_INTERACT_RADIUS) ||
         (snapshot.core.status === 'available' &&
           snapshot.core.earnedByTeam === local.team &&
           distance(local, snapshot.core) <= CORE_INTERACT_RADIUS) ||
-        distance(local, snapshot.relay) <= RELAY_CAPTURE_RADIUS,
+        distance(local, snapshot.relay) <= RELAY_CAPTURE_RADIUS ||
+        objInRange ||
+        (holdingAndCanPlace && distance(local, snapshot.pump) <= PUMP_PRESSURE_RADIUS) ||
+        holdingAndCanPlace,
     );
     const crateInRange = snapshot.props.some(
       (prop) => !prop.grabbedBy && distance(local, prop) <= GRAB_RADIUS,
@@ -1768,6 +1939,27 @@ export class ArenaScene {
       this.commands.interact(snapshot.relay.id);
       return;
     }
+
+    // Sandbag placement: holding a sandbag, interact places it on the ground
+    if (local.heldItem === 'SANDBAG') {
+      this.commands.interact();
+      return;
+    }
+
+    // Generator + Pump: holding a generator near the pump activates it
+    if (local.heldItem === 'GENERATOR' && distance(local, snapshot.pump) <= PUMP_PRESSURE_RADIUS) {
+      this.commands.interact(snapshot.pump.id);
+      return;
+    }
+
+    // Sandbag pile / Generator pickup
+    for (const obj of snapshot.interactiveObjects) {
+      if (obj.available && distance(local, obj) <= GRAB_RADIUS) {
+        this.commands.interact(obj.id);
+        return;
+      }
+    }
+
     if (
       snapshot.pump.state === 'offline' &&
       distance(local, snapshot.pump) <= PUMP_PRESSURE_RADIUS

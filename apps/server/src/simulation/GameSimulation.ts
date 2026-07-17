@@ -11,12 +11,15 @@ import {
   FLOOD_START_MS,
   FLOOD_STEP_MS,
   DEFAULT_HERO_ID,
+  GENERATOR_POSITION,
   GRABBED_PROP_FOLLOW_DISTANCE,
   GRAB_RADIUS,
   GRAVITY,
   JUMP_INITIAL_VELOCITY,
   HEROES,
   MATCH_COUNTDOWN_MS,
+  PUMP_DRAIN_INTERVAL_MS,
+  PUMP_DRAIN_RADIUS,
   PUMP_FLOOD_DELAY_MS,
   PUMP_POSITION,
   PUMP_PRESSURE_RADIUS,
@@ -28,6 +31,7 @@ import {
   RESCUE_CRATE_POSITION,
   RESCUE_CRATE_RADIUS,
   RESPAWN_MS,
+  SANDBAG_POSITION,
   SIMULATION_STEP_MS,
   SOLO_DRILL_DURATION_MS,
   SPAWN_POSITIONS,
@@ -42,6 +46,7 @@ import {
   type AbilitySlot,
   type GameEvent,
   type HeroId,
+  type InteractiveObject,
   type MatchMode,
   type PlayerCommand,
   type PlayerId,
@@ -59,6 +64,7 @@ import {
   type Vector2,
 } from '@signal-zero/shared';
 import { FloodSystem } from './flood.js';
+import { WaterGridSystem } from './waterGrid.js';
 import {
   isZeroDirection,
   moveCircleAxisSeparated,
@@ -112,6 +118,7 @@ export class GameSimulation {
   readonly #events: GameEvent[] = [];
   readonly #rematchVotes = new Set<PlayerId>();
   readonly #flood = new FloodSystem();
+  readonly #waterGrid = new WaterGridSystem();
   readonly #beacons: PublicBeaconState[] = [
     { id: 'beacon:A', team: 'A', ...copyPoint(BEACON_POSITIONS.A) },
     { id: 'beacon:B', team: 'B', ...copyPoint(BEACON_POSITIONS.B) },
@@ -143,6 +150,10 @@ export class GameSimulation {
     ...copyPoint(RESCUE_CRATE_POSITION),
     grabbedBy: null,
   };
+  readonly #interactiveObjects: InteractiveObject[] = [
+    { id: 'sandbag-pile', kind: 'sandbag-pile', ...copyPoint(SANDBAG_POSITION), available: true },
+    { id: 'generator', kind: 'generator', ...copyPoint(GENERATOR_POSITION), available: true },
+  ];
 
   #phase: PublicMatchState['phase'] = 'waiting';
   #now: number;
@@ -155,6 +166,7 @@ export class GameSimulation {
   #score = 0;
   #timeLimitMs: number | null = null;
   #nextFloodStepAt: number | null = null;
+  #nextPumpDrainAt: number | null = null;
   #crateLastHandledBy: PlayerId | null = null;
   readonly #configuredMode: MatchMode | null;
 
@@ -232,6 +244,7 @@ export class GameSimulation {
         stumbleUntil: 0,
         diveCooldownEndsAt: 0,
         grabbedObjectId: null,
+        heldItem: 'NONE',
         facing: team === 'A' ? { x: 1, y: 0 } : { x: -1, y: 0 },
         commandMode: 'idle',
       },
@@ -356,7 +369,18 @@ export class GameSimulation {
       this.#events.push({ type: 'MATCH_EXPIRED', at: this.#now });
       return;
     }
+    this.#waterGrid.step(deltaMs);
     this.#updateFlood();
+
+    // Pump drainage tick
+    if (
+      this.#pump.state === 'active' &&
+      this.#nextPumpDrainAt !== null &&
+      this.#now >= this.#nextPumpDrainAt
+    ) {
+      this.#waterGrid.drainAtPoint(this.#pump.x, this.#pump.y, PUMP_DRAIN_RADIUS);
+      this.#nextPumpDrainAt = this.#now + PUMP_DRAIN_INTERVAL_MS;
+    }
 
     for (const player of this.#players.values()) {
       this.#updateRespawn(player);
@@ -387,6 +411,8 @@ export class GameSimulation {
       serverTime: this.#now,
       match: {
         phase: this.#phase,
+        waterPhase: this.#waterGrid.waterPhase,
+        timerRemaining: this.#waterGrid.timerRemainingMs,
         mode: this.#matchMode(),
         elapsedMs: this.#elapsedMs,
         timeLimitMs: this.#timeLimitMs,
@@ -409,7 +435,12 @@ export class GameSimulation {
       props: [{ ...this.#rescueCrate }],
       stormBarriers: this.#stormBarriers(),
       beacons: this.#beacons.map((beacon) => ({ ...beacon })),
+      interactiveObjects: this.#interactiveObjects.map((obj) => ({ ...obj })),
       floodLevels: this.#flood.getLevels(),
+      waterGrid: Array.from(this.#waterGrid.cells, (cell) => ({
+        waterLevel: cell.waterLevel,
+        isBlocked: cell.isBlocked,
+      })),
     };
   }
 
@@ -489,6 +520,7 @@ export class GameSimulation {
     this.#elapsedMs = 0;
     this.#nextFloodStepAt = null;
     this.#flood.reset();
+    this.#waterGrid.reset();
     Object.assign(this.#relay, {
       state: 'neutral',
       ownerTeam: null,
@@ -510,6 +542,8 @@ export class GameSimulation {
       grabbedBy: null,
     } satisfies Partial<PublicPropState>);
     this.#crateLastHandledBy = null;
+    this.#nextPumpDrainAt = null;
+    for (const obj of this.#interactiveObjects) obj.available = true;
     for (const player of this.#players.values()) {
       const spawn = SPAWN_POSITIONS[player.state.team];
       Object.assign(player.state, {
@@ -529,6 +563,7 @@ export class GameSimulation {
         stumbleUntil: 0,
         diveCooldownEndsAt: 0,
         grabbedObjectId: null,
+        heldItem: 'NONE',
         facing: player.state.team === 'A' ? { x: 1, y: 0 } : { x: -1, y: 0 },
         commandMode: 'idle',
       } satisfies Partial<PublicPlayerState>);
@@ -902,6 +937,25 @@ export class GameSimulation {
   }
 
   #interact(player: RuntimePlayer, requestedTargetId: string | undefined): SimulationCommandResult {
+    // --- Sandbag placement: player holding a sandbag and interacting with the ground ---
+    if (player.state.heldItem === 'SANDBAG') {
+      const placed = this.#waterGrid.placeSandbag(player.state.x, player.state.y);
+      if (!placed) return rejected('Cannot place a sandbag at this location');
+      player.state.heldItem = 'NONE';
+      this.#addDrillScore(50);
+      return { accepted: true };
+    }
+
+    // --- Generator + Pump activation: player holding a generator near the pump ---
+    if (player.state.heldItem === 'GENERATOR') {
+      if (distance(player.state, this.#pump) > PUMP_PRESSURE_RADIUS) {
+        return rejected('Bring the generator closer to the Barangay Pump');
+      }
+      if (this.#pump.state === 'active') return rejected('Pump is already active');
+      this.#activatePumpFromGenerator(player);
+      return { accepted: true };
+    }
+
     if (requestedTargetId === this.#pump.id) {
       return rejected('Bring the rescue crate onto the Barangay Pump pressure zone');
     }
@@ -922,6 +976,26 @@ export class GameSimulation {
       }
       this.#depositCore(player);
       return { accepted: true };
+    }
+
+    // --- Sandbag pile pickup ---
+    if (this.#interactiveObjects[0]?.available) {
+      const sandbagPile = this.#interactiveObjects[0];
+      if (distance(player.state, sandbagPile) <= GRAB_RADIUS) {
+        sandbagPile.available = false;
+        player.state.heldItem = 'SANDBAG';
+        return { accepted: true };
+      }
+    }
+
+    // --- Generator pickup ---
+    if (this.#interactiveObjects[1]?.available) {
+      const generator = this.#interactiveObjects[1];
+      if (distance(player.state, generator) <= GRAB_RADIUS) {
+        generator.available = false;
+        player.state.heldItem = 'GENERATOR';
+        return { accepted: true };
+      }
     }
 
     if (requestedTargetId?.startsWith('beacon:'))
@@ -949,6 +1023,21 @@ export class GameSimulation {
     this.#pump.state = 'active';
     this.#pump.activatedByTeam = player.state.team;
     if (this.#nextFloodStepAt !== null) this.#nextFloodStepAt += PUMP_FLOOD_DELAY_MS;
+    this.#addDrillScore(400);
+    this.#events.push({
+      type: 'PUMP_ACTIVATED',
+      at: this.#now,
+      playerId: player.state.id,
+      team: player.state.team,
+    });
+  }
+
+  #activatePumpFromGenerator(player: RuntimePlayer): void {
+    if (this.#pump.state === 'active') return;
+    this.#pump.state = 'active';
+    this.#pump.activatedByTeam = player.state.team;
+    player.state.heldItem = 'NONE';
+    this.#nextPumpDrainAt = this.#now + PUMP_DRAIN_INTERVAL_MS;
     this.#addDrillScore(400);
     this.#events.push({
       type: 'PUMP_ACTIVATED',

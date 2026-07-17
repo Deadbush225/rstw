@@ -5,11 +5,13 @@ export type HeroId = 'maya' | 'tomas' | 'kidlat' | 'amihan';
 export type AbilitySlot = 'Q' | 'W' | 'E' | 'R';
 export type CastPreference = 'normal' | 'quick' | 'quick-release';
 export type MatchPhase = 'waiting' | 'countdown' | 'active' | 'ended';
+export type WaterPhase = 'PREP_CALM' | 'SWELL' | 'DELUGE';
 export type MatchMode = 'flood-drill' | 'versus';
 export type MatchOutcome = 'success' | 'time-expired' | null;
 export type ObjectiveState = 'neutral' | 'contested' | 'capturing' | 'captured';
 export type PropId = 'rescue-crate';
 export type StormBarrierId = 'storm-barrier:north' | 'storm-barrier:south';
+export type HeldItem = 'NONE' | 'SANDBAG' | 'GENERATOR';
 
 export interface Vector2 {
   x: number;
@@ -182,6 +184,7 @@ export interface PublicPlayerState {
   stumbleUntil: number;
   diveCooldownEndsAt: number;
   grabbedObjectId: EntityId | null;
+  heldItem: HeldItem;
   facing: Vector2;
   commandMode:
     | 'idle'
@@ -227,6 +230,14 @@ export interface PublicPumpState {
   activatedByTeam: TeamId | null;
 }
 
+export interface InteractiveObject {
+  id: string;
+  kind: 'sandbag-pile' | 'generator';
+  x: number;
+  y: number;
+  available: boolean;
+}
+
 export interface PublicPropState {
   id: PropId;
   kind: 'rescue-crate';
@@ -254,8 +265,15 @@ export interface StormBarrierDefinition {
   width: number;
 }
 
+export interface WaterCell {
+  waterLevel: number;
+  isBlocked: boolean;
+}
+
 export interface PublicMatchState {
   phase: MatchPhase;
+  waterPhase: WaterPhase;
+  timerRemaining: number;
   mode: MatchMode;
   elapsedMs: number;
   timeLimitMs: number | null;
@@ -279,7 +297,9 @@ export interface PublicSnapshot {
   props: PublicPropState[];
   stormBarriers: PublicStormBarrierState[];
   beacons: PublicBeaconState[];
+  interactiveObjects: InteractiveObject[];
   floodLevels: number[];
+  waterGrid: WaterCell[];
 }
 
 export type GameEvent =

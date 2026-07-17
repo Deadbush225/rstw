@@ -1,4 +1,4 @@
-import type { AbilityDefinition, HeroDefinition, HeroId, TeamDefinition } from './types.js';
+import type { AbilityDefinition, HeroDefinition, HeroId, TeamDefinition, WaterPhase } from './types.js';
 
 export const ROOM_NAME = 'signal_zero';
 export const REQUIRED_PLAYERS = 2;
@@ -40,6 +40,24 @@ export const STORM_BARRIER_KNOCKBACK = 96;
 export const STORM_BARRIER_STUMBLE_MS = 650;
 export const STORM_BARRIER_HIT_COOLDOWN_MS = 900;
 export const STORM_BARRIER_CLEARANCE = 30;
+export const SANDBAG_PLACEMENT_RADIUS = 64;
+export const PUMP_DRAIN_RADIUS = 192;
+export const PUMP_DRAIN_INTERVAL_MS = 4_000;
+
+/** Water phase timer: total duration in seconds. */
+export const WATER_PHASE_TOTAL_SECONDS = 480;
+/** PREP_CALM ends at this many seconds remaining on the timer. */
+export const PREP_CALM_END_SECONDS = 450;
+/** SWELL ends at this many seconds remaining on the timer. */
+export const SWELL_END_SECONDS = 360;
+/** Water grid maximum level (0-3). */
+export const WATER_GRID_MAX_LEVEL = 3;
+
+export function getWaterPhase(timerRemainingSeconds: number): WaterPhase {
+  if (timerRemainingSeconds > PREP_CALM_END_SECONDS) return 'PREP_CALM';
+  if (timerRemainingSeconds > SWELL_END_SECONDS) return 'SWELL';
+  return 'DELUGE';
+}
 
 export const TEAMS = {
   A: {
