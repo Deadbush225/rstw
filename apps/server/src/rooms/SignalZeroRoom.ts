@@ -107,6 +107,8 @@ export class SignalZeroRoom extends Room {
     const team = joined.team;
     if (!joined.accepted || !team) throw new Error(joined.reason ?? 'Unable to join room');
 
+    console.log(`[signal-zero] Client connected: ${client.sessionId} (mode: ${this.configuredMode})`);
+
     // joinOrCreate() resolves after onJoin returns; defer custom messages one room tick so the
     // browser has registered its handlers instead of dropping the first welcome/snapshot.
     this.clock.setTimeout(() => {

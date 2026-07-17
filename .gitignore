@@ -10,3 +10,4 @@ Thumbs.db
 .vite/
 apps/desktop/renderer/
 tmp/
+.roo/
