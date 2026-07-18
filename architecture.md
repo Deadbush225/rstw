@@ -4,8 +4,67 @@
 - **Root Workspace:** `/media/deadbush225/LocalDisk/System/Coding/Projects/rstw`
 - **Packages/Apps Map:**
   - `@signal-zero/server`: `apps/server`, primary entry `src/index.ts`, 20Hz ticks
-  - `@signal-zero/client`: `apps/client`, Svelte 5 Runes + Phaser
+  - `@signal-zero/client`: `apps/client`, Phaser 3 rendering + Three.js scene
   - `@signal-zero/shared`: `packages/shared`, types/schemas/constants
+
+### Server Source Layout (`apps/server/src/`)
+```
+src/
+├── index.ts                          # Colyseus server bootstrap
+├── network/                          # Connection security
+│   ├── commandGuard.ts
+│   └── commandGuard.test.ts
+├── rooms/                            # Colyseus room definitions
+│   ├── SignalZeroRoom.ts
+│   └── SignalZeroRoom.test.ts
+└── simulation/
+    ├── orchestrator/                 # Simulation entry point + command routing
+    │   ├── GameSimulation.ts         # Main fixed-step loop (20 Hz)
+    │   ├── GameSimulation.test.ts
+    │   ├── command-handler.ts        # Routes commands to subsystems
+    │   └── simulation-context.ts     # Shared types/interfaces for subsystems
+    ├── systems/                      # Gameplay behavior systems
+    │   ├── ability-system.ts         # QWER abilities (Rescue Line, etc.)
+    │   ├── combat-system.ts          # Attack targeting, chase, damage, respawn
+    │   ├── movement-system.ts        # WASD steering, path following, boats
+    │   ├── objective-system.ts       # Relay capture, core delivery, victory
+    │   ├── prop-system.ts            # Crate grab/release
+    │   ├── storm-barrier-system.ts   # Rotating hazard knockback
+    │   └── villager-system.ts        # NPC wander/rescue scoring
+    └── infrastructure/               # Deterministic utilities (no gameplay logic)
+        ├── flood.ts + .test.ts       # Flood propagation system
+        ├── pathfinding.ts + .test.ts # A* pathfinding
+        ├── partyPhysics.ts           # Circle collision resolution
+        └── waterGrid.ts              # Phase-based water level grid
+```
+
+### Client Source Layout (`apps/client/src/`)
+```
+src/
+├── main.ts                           # App bootstrap (store → client → game → HUD)
+├── config.ts                         # Client constants + server URL resolution
+├── styles.css                        # All UI styling
+├── audio/                            # Sound management
+│   └── AudioDirector.ts
+├── game/                             # Phaser/Three.js rendering
+│   ├── createGame.ts                 # Factory: creates ArenaScene + runtime wrapper
+│   ├── scene/                        # 3D arena rendering
+│   │   └── ArenaScene.ts             # Three.js scene, camera, water grid mesh
+│   ├── model/                        # Character 3D models
+│   │   ├── CharacterModel.ts
+│   │   └── CharacterModel.test.ts
+│   └── input/                        # Input handling
+│       ├── CommandGateway.ts         # Bridges user input → network commands
+│       ├── inputMath.ts              # Camera-relative direction math
+│       └── inputMath.test.ts
+├── network/                          # Colyseus client
+│   └── GameClient.ts                 # Socket connection, message routing
+├── state/                            # Client-side state store
+│   └── GameStore.ts                  # Ingests snapshots, provides estimated state
+└── ui/                               # HTML/CSS HUD (no Phaser)
+    ├── DashboardController.ts        # Lobby, hero select, preferences
+    └── HudController.ts              # In-game HUD, event feed, toasts
+```
 
 ## 2. Server-Authoritative State Schemas (Colyseus)
 - **Room State:**
@@ -29,7 +88,7 @@
   - `started`: boolean
   - `stepInterval`: 3200ms
 - **Water Grid System:**
-  - `WaterGridSystem` class in `apps/server/src/simulation/waterGrid.ts`
+  - `WaterGridSystem` class in `apps/server/src/simulation/infrastructure/waterGrid.ts`
   - Phase-based timer independent of match timer
   - `getWaterLevelAtPosition(x, y)`: number (0-3)
   - `getCell(col, row)`: WaterCell | undefined
@@ -77,13 +136,13 @@
 - `packages/shared/src/validation.test.ts`: Updated `validSnapshot()` with new fields
 
 ### Server
-- `apps/server/src/simulation/waterGrid.ts`: New `WaterGridSystem` class managing phase transitions and cell-level water state
-- `apps/server/src/simulation/GameSimulation.ts`: Integrated `WaterGridSystem` stepping, snapshot, and reset
+- `apps/server/src/simulation/infrastructure/waterGrid.ts`: New `WaterGridSystem` class managing phase transitions and cell-level water state
+- `apps/server/src/simulation/orchestrator/GameSimulation.ts`: Integrated `WaterGridSystem` stepping, snapshot, and reset
 
 ### Client
 - `apps/client/index.html`: Added `water-phase` and `water-timer` display elements
 - `apps/client/src/ui/HudController.ts`: Added water phase and timer rendering from snapshot
-- `apps/client/src/game/ArenaScene.ts`: Added `waterGridMesh` (instanced) for phase-based water visualization, `updateWaterGrid()` method
+- `apps/client/src/game/scene/ArenaScene.ts`: Added `waterGridMesh` (instanced) for phase-based water visualization, `updateWaterGrid()` method
 
 ## 7. New/Modified Files (Phase 4 — Movement Penalties & Rescue Boats)
 ### Shared
@@ -92,7 +151,7 @@
 - `packages/shared/src/map.ts`: Added `EVAC_CENTER` export (same as `RELAY_POSITION`)
 
 ### Server
-- `apps/server/src/simulation/GameSimulation.ts`:
+- `apps/server/src/simulation/orchestrator/GameSimulation.ts`:
   - Added `BoatRuntime` interface and `#boats` array
   - Added `boatId` to `RuntimePlayer`
   - `#updateControlledMotion()`: Boat driving replaces steering/steering-mode; deep-water penalty caps speed at 30% and drains stamina; stamina=0 triggers evac respawn at EVAC_CENTER
@@ -107,7 +166,7 @@
 - `apps/client/index.html`: Added `stamina-meter` (bar + label) and `boat-row` (status) UI elements
 - `apps/client/src/styles.css`: Added `.stamina-meter`, `.stamina-meter .meter-fill`, `.boat-row` styles
 - `apps/client/src/ui/HudController.ts`: Stamina bar visible when stamina < maxStamina; boat status shows role (Driving/Passenger) and capacity
-- `apps/client/src/game/ArenaScene.ts`: `updateCamera()` lowers camera height offset when player is driving a boat
+- `apps/client/src/game/scene/ArenaScene.ts`: `updateCamera()` lowers camera height offset when player is driving a boat
 
 ## 8. Movement Penalty & Boat Mechanics
 ### Deep-Water Stamina Penalty

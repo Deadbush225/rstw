@@ -26,7 +26,7 @@ import {
   type WelcomeMessage,
 } from '@signal-zero/shared';
 
-import type { CommandGateway } from '../game/CommandGateway';
+import type { CommandGateway } from '../game/input/CommandGateway';
 
 export type ConnectionState = 'offline' | 'connecting' | 'connected' | 'disconnected';
 

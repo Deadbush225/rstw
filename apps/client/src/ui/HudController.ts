@@ -14,7 +14,7 @@ import {
 } from '@signal-zero/shared';
 
 import { CLIENT_CONFIG } from '../config';
-import type { ArenaUiBridge } from '../game/CommandGateway';
+import type { ArenaUiBridge } from '../game/input/CommandGateway';
 import type { ConnectionState } from '../network/GameClient';
 
 interface HudActions {

@@ -200,7 +200,7 @@ A\* searches possible cells from the hero toward the goal. For each candidate, i
 
 Floodwater increases `g`, so A\* can prefer a longer dry street over a short slow one. The heuristic must not exaggerate remaining cost, and equal scores need deterministic tie-breaking. Tests should cover obstacles, no route, start equals goal, map bounds, deterministic results, and a route changing when water cost changes.
 
-The authoritative implementation is in `apps/server/src/simulation/pathfinding.ts`; flood progression is in `apps/server/src/simulation/flood.ts`. `packages/shared` supplies map/contracts/constants/validation, not a client-side copy of either simulation.
+The authoritative implementation is in `apps/server/src/simulation/infrastructure/pathfinding.ts`; flood progression is in `apps/server/src/simulation/infrastructure/flood.ts`. `packages/shared` supplies map/contracts/constants/validation, not a client-side copy of either simulation.
 
 Route cost and walking speed are related but different:
 

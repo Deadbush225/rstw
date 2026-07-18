@@ -21,7 +21,7 @@ import {
 } from '@signal-zero/shared';
 import { Room, type Client } from '@colyseus/core';
 import { CommandSecurityGuard } from '../network/commandGuard.js';
-import { GameSimulation } from '../simulation/GameSimulation.js';
+import { GameSimulation } from '../simulation/orchestrator/GameSimulation.js';
 
 const MAX_CATCH_UP_STEPS = 5;
 

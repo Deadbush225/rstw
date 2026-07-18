@@ -35,10 +35,10 @@ import {
   VILLAGER_COUNT,
   type VillagerState,
 } from '@signal-zero/shared';
-import type { GameStore } from '../state/GameStore';
-import { createCharacterModel, type CharacterModel } from './CharacterModel';
-import type { ArenaUiBridge, CommandGateway } from './CommandGateway';
-import { cameraRelativeDirection, isZeroDirection } from './inputMath';
+import type { GameStore } from '../../state/GameStore';
+import { createCharacterModel, type CharacterModel } from '../model/CharacterModel';
+import type { ArenaUiBridge, CommandGateway } from '../input/CommandGateway';
+import { cameraRelativeDirection, isZeroDirection } from '../input/inputMath';
 
 const WORLD_SCALE = 0.045;
 const TILE_WORLD_SIZE = TILE_SIZE * WORLD_SCALE;

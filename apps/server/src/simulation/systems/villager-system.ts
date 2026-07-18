@@ -14,8 +14,8 @@ import {
   type VillagerStatus,
   type Vector2,
 } from '@signal-zero/shared';
-import { findPath } from './pathfinding.js';
-import type { RuntimePlayer } from './simulation-context.js';
+import { findPath } from '../infrastructure/pathfinding.js';
+import type { RuntimePlayer } from '../orchestrator/simulation-context.js';
 
 const VILLAGER_HOME_POSITIONS: Vector2[] = [
   { x: 6.5 * 64, y: 4 * 64 },

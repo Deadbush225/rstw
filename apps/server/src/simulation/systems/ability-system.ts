@@ -6,8 +6,8 @@ import {
   type GameEvent,
   type Vector2,
 } from '@signal-zero/shared';
-import { hasClearWalkableLine } from './pathfinding.js';
-import type { RuntimePlayer, SimulationCommandResult } from './simulation-context.js';
+import { hasClearWalkableLine } from '../infrastructure/pathfinding.js';
+import type { RuntimePlayer, SimulationCommandResult } from '../orchestrator/simulation-context.js';
 
 const RESCUE_LINE_DAMAGE = 30;
 const RESCUE_LINE_WIDTH = 42;

@@ -6,8 +6,8 @@ import {
   RESCUE_CRATE_RADIUS,
   type PublicPropState,
 } from '@signal-zero/shared';
-import { moveCircleAxisSeparated } from './partyPhysics.js';
-import type { RuntimePlayer, SimulationCommandResult } from './simulation-context.js';
+import { moveCircleAxisSeparated } from '../infrastructure/partyPhysics.js';
+import type { RuntimePlayer, SimulationCommandResult } from '../orchestrator/simulation-context.js';
 
 function copyPoint(point: { x: number; y: number }): { x: number; y: number } {
   return { x: point.x, y: point.y };

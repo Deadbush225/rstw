@@ -1,10 +1,10 @@
 import type { PlayerCommand } from '@signal-zero/shared';
 import type { RuntimePlayer, SimulationCommandResult } from './simulation-context.js';
-import type { AbilitySystem } from './ability-system.js';
-import type { CombatSystem } from './combat-system.js';
-import type { MovementSystem } from './movement-system.js';
-import type { ObjectiveSystem } from './objective-system.js';
-import type { PropSystem } from './prop-system.js';
+import type { AbilitySystem } from '../systems/ability-system.js';
+import type { CombatSystem } from '../systems/combat-system.js';
+import type { MovementSystem } from '../systems/movement-system.js';
+import type { ObjectiveSystem } from '../systems/objective-system.js';
+import type { PropSystem } from '../systems/prop-system.js';
 
 /**
  * Route and pre-validate incoming PlayerCommand payloads.

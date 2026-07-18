@@ -6,8 +6,8 @@ import {
   type GameEvent,
   type HeroId,
 } from '@signal-zero/shared';
-import { findPath } from './pathfinding.js';
-import type { RuntimePlayer, SimulationCommandResult } from './simulation-context.js';
+import { findPath } from '../infrastructure/pathfinding.js';
+import type { RuntimePlayer, SimulationCommandResult } from '../orchestrator/simulation-context.js';
 
 const MAX_CHASE_DISTANCE = 625;
 

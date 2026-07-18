@@ -21,7 +21,7 @@ import {
   type PublicRelayState,
   type TeamId,
 } from '@signal-zero/shared';
-import type { RuntimePlayer, SimulationCommandResult } from './simulation-context.js';
+import type { RuntimePlayer, SimulationCommandResult } from '../orchestrator/simulation-context.js';
 
 function copyPoint(point: { x: number; y: number }): { x: number; y: number } {
   return { x: point.x, y: point.y };

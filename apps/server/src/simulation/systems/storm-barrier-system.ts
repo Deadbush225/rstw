@@ -7,8 +7,8 @@ import {
   STORM_BARRIER_STUMBLE_MS,
   type PublicStormBarrierState,
 } from '@signal-zero/shared';
-import { moveCircleAxisSeparated, stormBarrierCollisionNormal } from './partyPhysics.js';
-import type { SimulationContext, RuntimePlayer } from './simulation-context.js';
+import { moveCircleAxisSeparated, stormBarrierCollisionNormal } from '../infrastructure/partyPhysics.js';
+import type { SimulationContext, RuntimePlayer } from '../orchestrator/simulation-context.js';
 
 /**
  * Storm barrier rotation and player collision knockback.

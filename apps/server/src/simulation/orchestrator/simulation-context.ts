@@ -1,6 +1,6 @@
 import type { GameEvent, PublicMatchState, PlayerId, StormBarrierId, Vector2 } from '@signal-zero/shared';
-import type { FloodSystem } from './flood.js';
-import type { WaterGridSystem } from './waterGrid.js';
+import type { FloodSystem } from '../infrastructure/flood.js';
+import type { WaterGridSystem } from '../infrastructure/waterGrid.js';
 
 /**
  * Focused interface that subsystems depend on instead of the full GameSimulation class.

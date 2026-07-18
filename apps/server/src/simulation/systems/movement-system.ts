@@ -20,13 +20,13 @@ import {
   type PlayerId,
   type Vector2,
 } from '@signal-zero/shared';
-import { findPath } from './pathfinding.js';
+import { findPath } from '../infrastructure/pathfinding.js';
 import {
   isZeroDirection,
   moveCircleAxisSeparated,
   normalizeDirection,
-} from './partyPhysics.js';
-import type { RuntimePlayer, SimulationCommandResult } from './simulation-context.js';
+} from '../infrastructure/partyPhysics.js';
+import type { RuntimePlayer, SimulationCommandResult } from '../orchestrator/simulation-context.js';
 
 function copyPoint(point: Vector2): Vector2 {
   return { x: point.x, y: point.y };

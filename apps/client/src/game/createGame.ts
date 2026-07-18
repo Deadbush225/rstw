@@ -1,6 +1,6 @@
 import type { GameStore } from '../state/GameStore';
-import { ArenaScene } from './ArenaScene';
-import type { ArenaUiBridge, CommandGateway } from './CommandGateway';
+import { ArenaScene } from './scene/ArenaScene';
+import type { ArenaUiBridge, CommandGateway } from './input/CommandGateway';
 
 export interface GameRuntime {
   scene: ArenaScene;

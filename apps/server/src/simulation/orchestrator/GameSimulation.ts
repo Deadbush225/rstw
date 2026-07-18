@@ -80,15 +80,15 @@ import {
   type Vector2,
   type VillagerStatus,
 } from '@signal-zero/shared';
-import { FloodSystem } from './flood.js';
-import { WaterGridSystem } from './waterGrid.js';
+import { FloodSystem } from '../infrastructure/flood.js';
+import { WaterGridSystem } from '../infrastructure/waterGrid.js';
 import {
   isZeroDirection,
   moveCircleAxisSeparated,
   normalizeDirection,
   stormBarrierCollisionNormal,
-} from './partyPhysics.js';
-import { findPath, hasClearWalkableLine } from './pathfinding.js';
+} from '../infrastructure/partyPhysics.js';
+import { findPath, hasClearWalkableLine } from '../infrastructure/pathfinding.js';
 
 const RESCUE_LINE_DAMAGE = 30;
 const RESCUE_LINE_WIDTH = 42;
