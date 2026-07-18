@@ -44,6 +44,17 @@ export const SANDBAG_PLACEMENT_RADIUS = 64;
 export const PUMP_DRAIN_RADIUS = 192;
 export const PUMP_DRAIN_INTERVAL_MS = 4_000;
 
+/** Maximum stamina for deep-water movement penalty. */
+export const MAX_STAMINA = 100;
+/** Stamina drained per second while in deep water (waterLevel >= 2). */
+export const STAMINA_DRAIN_RATE = 10;
+/** Speed multiplier when in deep water (waterLevel >= 2). */
+export const DEEP_WATER_SPEED_CAP = 0.3;
+/** Base movement speed for rescue boats (pixels per second). */
+export const BOAT_SPEED = 220;
+/** Maximum passengers per boat (driver + up to 3). */
+export const BOAT_MAX_PASSENGERS = 3;
+
 /** Water phase timer: total duration in seconds. */
 export const WATER_PHASE_TOTAL_SECONDS = 480;
 /** PREP_CALM ends at this many seconds remaining on the timer. */

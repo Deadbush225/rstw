@@ -3,11 +3,15 @@ import {
   AIR_CONTROL_MULTIPLIER,
   BEACON_INTERACT_RADIUS,
   BEACON_POSITIONS,
+  BOAT_MAX_PASSENGERS,
+  BOAT_SPEED,
   CORE_INTERACT_RADIUS,
+  DEEP_WATER_SPEED_CAP,
   DIVE_COOLDOWN_MS,
   DIVE_DURATION_MS,
   DIVE_RECOVERY_MS,
   DIVE_SPEED,
+  EVAC_CENTER,
   EVAC_CENTER_RADIUS,
   FLOOD_START_MS,
   FLOOD_STEP_MS,
@@ -19,6 +23,7 @@ import {
   JUMP_INITIAL_VELOCITY,
   HEROES,
   MATCH_COUNTDOWN_MS,
+  MAX_STAMINA,
   PUMP_DRAIN_INTERVAL_MS,
   PUMP_DRAIN_RADIUS,
   PUMP_FLOOD_DELAY_MS,
@@ -37,6 +42,7 @@ import {
   SIMULATION_STEP_MS,
   SOLO_DRILL_DURATION_MS,
   SPAWN_POSITIONS,
+  STAMINA_DRAIN_RATE,
   STORM_BARRIER_CLEARANCE,
   STORM_BARRIER_DEFINITIONS,
   STORM_BARRIER_HIT_COOLDOWN_MS,
@@ -105,6 +111,14 @@ interface RuntimePlayer {
   hazardHitCooldowns: Map<StormBarrierId, number>;
 }
 
+interface BoatRuntime {
+  id: string;
+  x: number;
+  y: number;
+  driverId: PlayerId | null;
+  passengerIds: PlayerId[];
+}
+
 interface VillagerEntity {
   id: string;
   x: number;
@@ -148,6 +162,7 @@ export class GameSimulation {
   readonly #players = new Map<PlayerId, RuntimePlayer>();
   readonly #events: GameEvent[] = [];
   readonly #rematchVotes = new Set<PlayerId>();
+  readonly #boats: BoatRuntime[] = [];
   readonly #villagers: VillagerEntity[] = [];
   readonly #flood = new FloodSystem();
   readonly #waterGrid = new WaterGridSystem();
@@ -262,6 +277,8 @@ export class GameSimulation {
         maxHealth: hero.maxHealth,
         energy: hero.maxEnergy,
         maxEnergy: hero.maxEnergy,
+        stamina: MAX_STAMINA,
+        maxStamina: MAX_STAMINA,
         alive: true,
         connected: true,
         ready: false,
@@ -280,6 +297,7 @@ export class GameSimulation {
         heldItem: 'NONE',
         carryingVillagers: 0,
         facing: team === 'A' ? { x: 1, y: 0 } : { x: -1, y: 0 },
+        boatId: null,
         commandMode: 'idle',
       },
       path: [],
@@ -483,6 +501,13 @@ export class GameSimulation {
         homeY: v.homeY,
         elevation: v.elevation,
       })),
+      boats: this.#boats.map((boat) => ({
+        id: boat.id,
+        x: boat.x,
+        y: boat.y,
+        driverId: boat.driverId,
+        passengerCount: boat.passengerIds.length,
+      })),
       floodLevels: this.#flood.getLevels(),
       waterGrid: Array.from(this.#waterGrid.cells, (cell) => ({
         waterLevel: cell.waterLevel,
@@ -593,12 +618,19 @@ export class GameSimulation {
     this.#resilienceScore = 0;
     for (const obj of this.#interactiveObjects) obj.available = true;
     this.#spawnVillagers();
+    this.#boats.length = 0;
+    this.#boats.push(
+      { id: 'boat:0', ...copyPoint(EVAC_CENTER), driverId: null, passengerIds: [] },
+      { id: 'boat:1', ...copyPoint(EVAC_CENTER), driverId: null, passengerIds: [] },
+    );
     for (const player of this.#players.values()) {
       const spawn = SPAWN_POSITIONS[player.state.team];
       Object.assign(player.state, {
         ...copyPoint(spawn),
         health: player.state.maxHealth,
         energy: player.state.maxEnergy,
+        stamina: MAX_STAMINA,
+        maxStamina: MAX_STAMINA,
         alive: true,
         respawnAt: null,
         attackTargetId: null,
@@ -615,6 +647,7 @@ export class GameSimulation {
         heldItem: 'NONE',
         carryingVillagers: 0,
         facing: player.state.team === 'A' ? { x: 1, y: 0 } : { x: -1, y: 0 },
+        boatId: null,
         commandMode: 'idle',
       } satisfies Partial<PublicPlayerState>);
       player.path = [];
@@ -756,6 +789,26 @@ export class GameSimulation {
   }
 
   #updateControlledMotion(player: RuntimePlayer, deltaMs: number): void {
+    // --- Boat driving ---
+    if (player.state.boatId) {
+      const boat = this.#boats.find((b) => b.id === player.state.boatId);
+      if (boat && boat.driverId === player.state.id) {
+        if (!isZeroDirection(player.steerDirection)) {
+          const passengerCount = boat.passengerIds.length;
+          const speedMultiplier = 1 - (passengerCount / BOAT_MAX_PASSENGERS) * 0.5;
+          const boatSpeed = BOAT_SPEED * speedMultiplier;
+          player.state.commandMode = 'steering';
+          this.#moveBoat(boat, player.steerDirection, boatSpeed, deltaMs);
+          player.state.x = boat.x;
+          player.state.y = boat.y;
+          if (!isZeroDirection(player.steerDirection)) player.state.facing = copyPoint(player.steerDirection);
+        } else {
+          player.state.commandMode = 'idle';
+        }
+        return;
+      }
+    }
+
     if (this.#now < player.diveEndsAt) {
       player.state.commandMode = 'diving';
       this.#moveDirect(player, player.diveDirection, DIVE_SPEED, deltaMs);
@@ -771,10 +824,31 @@ export class GameSimulation {
           : this.#flood.getMovementMultiplier(player.state);
       const airMultiplier = player.state.grounded ? 1 : AIR_CONTROL_MULTIPLIER;
       player.state.commandMode = 'steering';
+
+      // --- Deep-water stamina penalty ---
+      const waterLevel = this.#waterGrid.getWaterLevelAtPosition(player.state);
+      let speed = HEROES[player.state.heroId].movementSpeed * floodMultiplier * airMultiplier;
+      if (waterLevel >= 2 && this.#now >= player.state.floodImmuneUntil) {
+        speed *= DEEP_WATER_SPEED_CAP;
+        player.state.stamina = Math.max(0, player.state.stamina - (STAMINA_DRAIN_RATE * deltaMs) / 1_000);
+        if (player.state.stamina <= 0) {
+          this.#dismountBoat(player);
+          this.#releaseProp(player, true);
+          this.#dropCore(player);
+          const evacSpawn = copyPoint(EVAC_CENTER);
+          player.state.x = evacSpawn.x;
+          player.state.y = evacSpawn.y;
+          player.state.stamina = MAX_STAMINA;
+          player.state.health = Math.max(1, player.state.health - 10);
+          this.#stopPlayer(player, 'idle');
+          return;
+        }
+      }
+
       this.#moveDirect(
         player,
         player.steerDirection,
-        HEROES[player.state.heroId].movementSpeed * floodMultiplier * airMultiplier,
+        speed,
         deltaMs,
       );
       return;
@@ -987,6 +1061,19 @@ export class GameSimulation {
   }
 
   #interact(player: RuntimePlayer, requestedTargetId: string | undefined): SimulationCommandResult {
+    // --- Boat mount/dismount (only when no explicit target is provided) ---
+    if (!requestedTargetId) {
+      if (player.state.boatId) {
+        this.#dismountBoat(player);
+        return { accepted: true };
+      }
+      const nearestBoat = this.#findNearestBoat(player);
+      if (nearestBoat && distance(player.state, nearestBoat) <= GRAB_RADIUS) {
+        this.#mountBoat(player, nearestBoat);
+        return { accepted: true };
+      }
+    }
+
     // --- Sandbag placement: player holding a sandbag and interacting with the ground ---
     if (player.state.heldItem === 'SANDBAG') {
       const placed = this.#waterGrid.placeSandbag(player.state.x, player.state.y);
@@ -1123,10 +1210,13 @@ export class GameSimulation {
       return;
     const spawn = SPAWN_POSITIONS[player.state.team];
     this.#releaseProp(player, true);
+    this.#dismountBoat(player);
     Object.assign(player.state, {
       ...copyPoint(spawn),
       health: player.state.maxHealth,
       energy: player.state.maxEnergy,
+      stamina: MAX_STAMINA,
+      maxStamina: MAX_STAMINA,
       alive: true,
       respawnAt: null,
       attackTargetId: null,
@@ -1135,6 +1225,7 @@ export class GameSimulation {
       grounded: true,
       stumbleUntil: 0,
       grabbedObjectId: null,
+      boatId: null,
       commandMode: 'idle',
     } satisfies Partial<PublicPlayerState>);
     player.path = [];
@@ -1249,6 +1340,7 @@ export class GameSimulation {
     target.verticalVelocity = 0;
     this.#stopPlayer(target, 'idle');
     this.#releaseProp(target, true);
+    this.#dismountBoat(target);
     this.#dropCore(target);
     this.#events.push({
       type: 'DEFEATED',
@@ -1560,5 +1652,58 @@ export class GameSimulation {
         player.state.carryingVillagers = 0;
       }
     }
+  }
+
+  #mountBoat(player: RuntimePlayer, boat: BoatRuntime): void {
+    if (!boat.driverId) {
+      boat.driverId = player.state.id;
+      player.state.boatId = boat.id;
+    } else if (boat.passengerIds.length < BOAT_MAX_PASSENGERS - 1) {
+      boat.passengerIds.push(player.state.id);
+      player.state.boatId = boat.id;
+    } else {
+      return;
+    }
+    player.state.x = boat.x;
+    player.state.y = boat.y;
+    player.path = [];
+    player.steerDirection = { x: 0, y: 0 };
+  }
+
+  #dismountBoat(player: RuntimePlayer): void {
+    if (!player.state.boatId) return;
+    const boat = this.#boats.find((b) => b.id === player.state.boatId);
+    if (!boat) return;
+    if (boat.driverId === player.state.id) {
+      boat.driverId = null;
+    } else {
+      const index = boat.passengerIds.indexOf(player.state.id);
+      if (index !== -1) boat.passengerIds.splice(index, 1);
+    }
+    player.state.boatId = null;
+  }
+
+  #findNearestBoat(player: RuntimePlayer): BoatRuntime | undefined {
+    let nearest: BoatRuntime | undefined;
+    let nearestDistance = GRAB_RADIUS;
+    for (const boat of this.#boats) {
+      const dist = distance(player.state, boat);
+      if (dist <= nearestDistance) {
+        nearest = boat;
+        nearestDistance = dist;
+      }
+    }
+    return nearest;
+  }
+
+  #moveBoat(boat: BoatRuntime, direction: Vector2, speed: number, deltaMs: number): void {
+    const distanceThisStep = (speed * deltaMs) / 1_000;
+    const next = moveCircleAxisSeparated(
+      boat,
+      { x: direction.x * distanceThisStep, y: direction.y * distanceThisStep },
+      PLAYER_COLLISION_RADIUS * 2,
+    );
+    boat.x = next.x;
+    boat.y = next.y;
   }
 }

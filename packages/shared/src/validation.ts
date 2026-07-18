@@ -87,6 +87,8 @@ const publicPlayerStateSchema = z
     maxHealth: z.number().finite().positive(),
     energy: z.number().finite().nonnegative(),
     maxEnergy: z.number().finite().positive(),
+    stamina: z.number().finite().nonnegative(),
+    maxStamina: z.number().finite().positive(),
     alive: z.boolean(),
     connected: z.boolean(),
     ready: z.boolean(),
@@ -105,6 +107,7 @@ const publicPlayerStateSchema = z
     heldItem: z.enum(['NONE', 'SANDBAG', 'GENERATOR']),
     carryingVillagers: z.number().int().nonnegative(),
     facing: normalizedDirectionSchema,
+    boatId: z.string().min(1).max(128).nullable(),
     commandMode: z.enum([
       'idle',
       'moving',
@@ -211,6 +214,26 @@ const villagerStateSchema = z
   })
   .strict();
 
+const interactiveObjectSchema = z
+  .object({
+    id: z.string().min(1).max(128),
+    kind: z.enum(['sandbag-pile', 'generator']),
+    x: finiteCoordinate,
+    y: finiteCoordinate,
+    available: z.boolean(),
+  })
+  .strict();
+
+const boatStateSchema = z
+  .object({
+    id: z.string().min(1).max(128),
+    x: finiteCoordinate,
+    y: finiteCoordinate,
+    driverId: z.string().min(1).max(128).nullable(),
+    passengerCount: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const publicSnapshotSchema = z
   .object({
     tick: z.number().int().nonnegative(),
@@ -224,6 +247,8 @@ export const publicSnapshotSchema = z
     stormBarriers: z.array(stormBarrierStateSchema).length(2),
     beacons: z.array(beaconStateSchema).length(2),
     villagers: z.array(villagerStateSchema),
+    interactiveObjects: z.array(interactiveObjectSchema),
+    boats: z.array(boatStateSchema),
     floodLevels: z
       .array(z.number().int().min(0).max(FLOOD_MAX_LEVEL))
       .length(ARENA_COLS * ARENA_ROWS),

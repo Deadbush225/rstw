@@ -84,3 +84,46 @@
 - `apps/client/index.html`: Added `water-phase` and `water-timer` display elements
 - `apps/client/src/ui/HudController.ts`: Added water phase and timer rendering from snapshot
 - `apps/client/src/game/ArenaScene.ts`: Added `waterGridMesh` (instanced) for phase-based water visualization, `updateWaterGrid()` method
+
+## 7. New/Modified Files (Phase 4 — Movement Penalties & Rescue Boats)
+### Shared
+- `packages/shared/src/types.ts`: Added `stamina`, `maxStamina`, `boatId` to `PublicPlayerState`; added `BoatState` interface; added `boats: BoatState[]` to `PublicSnapshot`
+- `packages/shared/src/constants.ts`: Added `MAX_STAMINA`, `STAMINA_DRAIN_RATE`, `DEEP_WATER_SPEED_CAP`, `BOAT_SPEED`, `BOAT_MAX_PASSENGERS`
+- `packages/shared/src/map.ts`: Added `EVAC_CENTER` export (same as `RELAY_POSITION`)
+
+### Server
+- `apps/server/src/simulation/GameSimulation.ts`:
+  - Added `BoatRuntime` interface and `#boats` array
+  - Added `boatId` to `RuntimePlayer`
+  - `#updateControlledMotion()`: Boat driving replaces steering/steering-mode; deep-water penalty caps speed at 30% and drains stamina; stamina=0 triggers evac respawn at EVAC_CENTER
+  - `#interact()`: Boat mount/dismount via INTERACT (no explicit target required)
+  - `#prepareRoundState()`: Spawns 2 boats at EVAC_CENTER, resets stamina/maxStamina
+  - `#updateRespawn()`: Resets stamina, dismounts from boat
+  - `#dealDamage()`: Dismounts defeated player from boat
+  - Added `#mountBoat()`, `#dismountBoat()`, `#findNearestBoat()`, `#moveBoat()` methods
+  - `getSnapshot()`: Includes `boats: BoatState[]`
+
+### Client
+- `apps/client/index.html`: Added `stamina-meter` (bar + label) and `boat-row` (status) UI elements
+- `apps/client/src/styles.css`: Added `.stamina-meter`, `.stamina-meter .meter-fill`, `.boat-row` styles
+- `apps/client/src/ui/HudController.ts`: Stamina bar visible when stamina < maxStamina; boat status shows role (Driving/Passenger) and capacity
+- `apps/client/src/game/ArenaScene.ts`: `updateCamera()` lowers camera height offset when player is driving a boat
+
+## 8. Movement Penalty & Boat Mechanics
+### Deep-Water Stamina Penalty
+- When `waterLevel >= 2` (deep water) and player is not flood-immune:
+  - Movement speed capped at 30% (`DEEP_WATER_SPEED_CAP`)
+  - Stamina drains at 10/s (`STAMINA_DRAIN_RATE`)
+  - Stamina == 0 → drop held item, drop core, respawn at EVAC_CENTER, lose 10 HP
+- Stamina resets to `MAX_STAMINA` (100) on respawn and round start
+- Boats ignore water grid speed penalties entirely
+
+### Rescue Boats
+- 2 boats spawn at EVAC_CENTER (arena centre) each round
+- Mount: press F (INTERACT) near a boat with no explicit target → becomes driver or passenger
+- Dismount: press F while already on a boat
+- Driver uses WASD steering; boat speed = `BOAT_SPEED * (1 - (passengers / 3) * 0.5)`
+  - 0 passengers: 100% speed (220 px/s)
+  - 3 passengers: 50% speed (110 px/s)
+- Boat collision radius = `PLAYER_COLLISION_RADIUS * 2`
+- Death/disconnect/respawn dismounts the player from the boat

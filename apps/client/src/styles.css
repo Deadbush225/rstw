@@ -509,6 +509,22 @@ button {
   background: linear-gradient(90deg, #2c8eae, #57d2ed);
 }
 
+.stamina-meter {
+  margin-top: 2px;
+}
+
+.stamina-meter .meter-fill {
+  background: linear-gradient(90deg, #8a6e3a, #e8c252);
+}
+
+.boat-row {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #72d9ff;
+}
+
 .meter span {
   position: absolute;
   inset: 0;

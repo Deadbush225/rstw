@@ -170,6 +170,8 @@ export interface PublicPlayerState {
   maxHealth: number;
   energy: number;
   maxEnergy: number;
+  stamina: number;
+  maxStamina: number;
   alive: boolean;
   connected: boolean;
   ready: boolean;
@@ -188,6 +190,7 @@ export interface PublicPlayerState {
   heldItem: HeldItem;
   carryingVillagers: number;
   facing: Vector2;
+  boatId: string | null;
   commandMode:
     | 'idle'
     | 'moving'
@@ -277,6 +280,14 @@ export interface StormBarrierDefinition {
   width: number;
 }
 
+export interface BoatState {
+  id: string;
+  x: number;
+  y: number;
+  driverId: PlayerId | null;
+  passengerCount: number;
+}
+
 export interface WaterCell {
   waterLevel: number;
   isBlocked: boolean;
@@ -312,6 +323,7 @@ export interface PublicSnapshot {
   beacons: PublicBeaconState[];
   interactiveObjects: InteractiveObject[];
   villagers: VillagerState[];
+  boats: BoatState[];
   floodLevels: number[];
   waterGrid: WaterCell[];
 }

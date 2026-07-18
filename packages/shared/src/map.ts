@@ -22,6 +22,8 @@ export const BUILDING_RECTS = [
 const CAUSEWAY_ROWS = new Set([3, 6, 7, 10]);
 
 export const RELAY_POSITION: Vector2 = { x: ARENA_WIDTH / 2, y: ARENA_HEIGHT / 2 };
+/** Evacuation centre where rescue boats spawn. */
+export const EVAC_CENTER: Vector2 = { x: ARENA_WIDTH / 2, y: ARENA_HEIGHT / 2 };
 export const PUMP_POSITION: Vector2 = { x: 9.5 * TILE_SIZE, y: 1.5 * TILE_SIZE };
 export const RESCUE_CRATE_POSITION: Vector2 = { x: 7.5 * TILE_SIZE, y: ARENA_HEIGHT / 2 };
 export const SANDBAG_POSITION: Vector2 = { x: 5.5 * TILE_SIZE, y: 7.5 * TILE_SIZE };

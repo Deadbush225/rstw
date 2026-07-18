@@ -235,6 +235,9 @@ export class GameClient implements CommandGateway {
     room.onMessage(ServerMessage.SNAPSHOT, (payload: unknown) => {
       const parsed = publicSnapshotSchema.safeParse(payload);
       if (!parsed.success) {
+        console.error('[GameClient] Snapshot validation failed:', parsed.error.issues.map(
+          (i) => `${i.path.join('.')}: ${i.message} (${i.code})`,
+        ));
         this.handlers.onError('The server sent an invalid authoritative snapshot.');
         return;
       }

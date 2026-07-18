@@ -4,6 +4,7 @@ import {
   REQUIRED_PLAYERS,
   TEAMS,
   type AbilitySlot,
+  type BoatState,
   type GameEvent,
   type MatchMode,
   type PublicPlayerState,
@@ -132,6 +133,11 @@ export class HudController implements ArenaUiBridge {
   private readonly healthLabel = requiredElement<HTMLElement>('health-label');
   private readonly energyFill = requiredElement<HTMLElement>('energy-fill');
   private readonly energyLabel = requiredElement<HTMLElement>('energy-label');
+  private readonly staminaMeter = requiredElement<HTMLElement>('stamina-meter');
+  private readonly staminaFill = requiredElement<HTMLElement>('stamina-fill');
+  private readonly staminaLabel = requiredElement<HTMLElement>('stamina-label');
+  private readonly boatRow = requiredElement<HTMLElement>('boat-row');
+  private readonly boatStatus = requiredElement<HTMLElement>('boat-status');
   private readonly heroPortrait = requiredElement<HTMLElement>('hero-portrait');
   private readonly heroName = requiredElement<HTMLElement>('hero-name');
   private readonly teamLabel = requiredElement<HTMLElement>('team-label');
@@ -328,6 +334,26 @@ export class HudController implements ArenaUiBridge {
     const snapshot = this.latestSnapshot;
     const local = snapshot?.players.find((player) => player.id === this.currentPlayerId);
     if (!snapshot || !local) return;
+
+    // --- Stamina bar (visible when stamina is being drained in deep water) ---
+    const draining = local.stamina < local.maxStamina;
+    this.staminaMeter.hidden = !draining;
+    if (draining) {
+      setFill(this.staminaFill, local.stamina / Math.max(1, local.maxStamina));
+      this.staminaLabel.textContent = `${Math.floor(local.stamina)} / ${local.maxStamina} ST`;
+    }
+
+    // --- Boat status (visible when mounted on a boat) ---
+    if (local.boatId) {
+      const boat = snapshot.boats.find((b: BoatState) => b.id === local.boatId);
+      if (boat) {
+        this.boatRow.hidden = false;
+        const role = boat.driverId === local.id ? 'Driving' : 'Passenger';
+        this.boatStatus.textContent = `Boat · ${role} · ${boat.passengerCount + 1} / 4 aboard`;
+      }
+    } else {
+      this.boatRow.hidden = true;
+    }
 
     const cooldownMs = Math.max(0, local.qCooldownEndsAt - serverNow);
     const canCast =

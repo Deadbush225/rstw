@@ -1596,8 +1596,11 @@ export class ArenaScene {
 
   private updateCamera(deltaSeconds: number, now: number): void {
     const localView = this.commands.playerId ? this.playerViews.get(this.commands.playerId) : null;
+    const localPlayer = this.getLocalPlayer();
+    // Snap camera height to boat elevation when driving
+    const boatHeightOffset = localPlayer?.boatId ? 0.65 : 1.25;
     const desiredTarget = localView
-      ? localView.model.root.position.clone().add(new THREE.Vector3(0, 1.25, 0))
+      ? localView.model.root.position.clone().add(new THREE.Vector3(0, boatHeightOffset, 0))
       : new THREE.Vector3(0, 1.1, 0);
     this.cameraTarget.lerp(desiredTarget, 1 - Math.exp(-deltaSeconds * 8.5));
 
